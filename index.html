@@ -40,36 +40,6 @@
   .hero p.lead { font-size: 19px; color: var(--muted); max-width: 640px; margin: 0 auto 28px; }
   .hero .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
-  /* CSS mock of the player */
-  .mock {
-    margin: 50px auto 0; max-width: 720px; aspect-ratio: 16/9;
-    background: linear-gradient(135deg, #1a2030, #0a0d14);
-    border: 1px solid var(--line); border-radius: 14px; position: relative; overflow: hidden;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-  }
-  .mock .play {
-    position: absolute; inset: 0; margin: auto; width: 0; height: 0;
-    border-style: solid; border-width: 22px 0 22px 38px;
-    border-color: transparent transparent transparent rgba(255,255,255,0.25);
-  }
-  .mock .m-meta {
-    position: absolute; top: 18px; left: 18px;
-    background: rgba(10,12,18,0.72); border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 10px; padding: 10px 14px; font-size: 14px; text-align: left;
-    text-shadow: 0 1px 3px #000;
-  }
-  .mock .m-meta b { color: var(--accent); }
-  .mock .m-clock {
-    position: absolute; top: 18px; right: 18px;
-    background: rgba(10,12,18,0.72); border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 8px; padding: 6px 12px; font-variant-numeric: tabular-nums; font-weight: 600;
-  }
-  .mock .m-sub {
-    position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%);
-    font-size: 22px; font-weight: 600; white-space: nowrap;
-  }
-  .mock .m-sub span { background: rgba(0,0,0,0.55); padding: 3px 12px; border-radius: 6px; }
-
   section { padding: 46px 0; border-top: 1px solid var(--line); }
   section h2 { font-size: 26px; margin: 0 0 8px; }
   section .sub { color: var(--muted); margin: 0 0 26px; }
@@ -95,6 +65,52 @@
   }
   .note { background: #16202e; border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: 0 8px 8px 0; color: #cdd6e6; font-size: 14.5px; }
 
+  /* Demo video */
+  .demo-frame {
+    position: relative; max-width: 760px; margin: 0 auto;
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    background: #000; box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+  .demo-frame video { display: block; width: 100%; aspect-ratio: 16/9; background: #000; }
+  .demo-frame .demo-meta {
+    position: absolute; top: 14px; left: 14px; max-width: 62%;
+    background: rgba(10,12,18,0.72); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px; padding: 9px 13px; font-size: 13.5px; line-height: 1.5;
+    text-align: left; text-shadow: 0 1px 3px #000; pointer-events: none;
+  }
+  .demo-frame .demo-meta .k { color: var(--accent); font-weight: 600; }
+  .demo-frame .demo-clock {
+    position: absolute; top: 14px; right: 14px;
+    background: rgba(10,12,18,0.72); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; padding: 5px 11px; font-variant-numeric: tabular-nums;
+    font-weight: 600; font-size: 13.5px; pointer-events: none; text-shadow: 0 1px 3px #000;
+  }
+  .demo-frame .demo-subs {
+    position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%); max-width: 88%;
+    text-align: center; font-size: clamp(15px, 2.4vw, 22px); font-weight: 600; line-height: 1.3;
+    color: #fff; pointer-events: none; text-shadow: 0 2px 4px #000;
+  }
+  .demo-frame .demo-subs:empty { display: none; }
+  .demo-frame .demo-subs span {
+    background: rgba(0,0,0,0.55); padding: 2px 12px; border-radius: 6px;
+    box-decoration-break: clone; -webkit-box-decoration-break: clone;
+  }
+  .demo-frame .demo-subs.top { top: 9%; bottom: auto; }
+
+  .demo { max-width: 860px; margin: 30px auto 6px; }
+  .demo-cap { text-align: center; color: var(--muted); font-size: 15px; margin: 0 auto 14px; max-width: 700px; }
+  .demo-cap .demo-hint { color: var(--text); }
+  .demo-bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 14px; }
+  .tg {
+    background: #222733; color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 13px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .tg:hover { background: #2b3140; }
+  .tg.on { background: rgba(79,140,255,0.16); border-color: var(--accent); color: #cfe0ff; }
+  .hidden { display: none !important; }
+
+  .demo-note { color: var(--muted); font-size: 14px; text-align: center; margin: 18px auto 0; max-width: 640px; }
+
   footer { border-top: 1px solid var(--line); padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align: center; }
 </style>
 </head>
@@ -104,8 +120,9 @@
   <div class="wrap">
     <span class="brand">🎬 Video Subtitle Overlay</span>
     <nav>
+      <a href="#demo">Demo</a>
       <a href="#how">How it works</a>
-      <a href="#keys">Shortcuts</a>
+      <a href="#run">Download</a>
       <a href="https://github.com/nipunbatra/video-subtitle-overlay">GitHub</a>
       <a class="btn" href="app.html">Launch app →</a>
     </nav>
@@ -125,14 +142,30 @@
       <a class="btn ghost" href="https://github.com/nipunbatra/video-subtitle-overlay">View source</a>
     </div>
 
-    <div class="mock" aria-hidden="true">
-      <div class="m-meta"><b>Lecture:</b> Introduction to Machine Learning, 14<br><b>Date:</b> 20 Feb 2024</div>
-      <div class="m-clock">12:04 <span style="color:var(--muted)">/ 48:31</span></div>
-      <div class="play"></div>
-      <div class="m-sub"><span>…and so the overlay stays visible the whole time.</span></div>
+  </div><!-- /hero -->
+
+  <div class="demo" id="demo">
+    <p class="demo-cap">A ~37-second explainer animated with <b>Manim</b> (the engine behind 3Blue1Brown), narrated by <b>Gemini</b>. <span class="demo-hint">Toggle the overlays live — exactly what the app draws into the page:</span></p>
+    <div class="demo-bar">
+      <button class="tg on" data-act="meta">Metadata</button>
+      <button class="tg on" data-act="subs">Subtitles</button>
+      <button class="tg on" data-act="clock">Timecode</button>
+      <button class="tg" data-act="pos">Subs: bottom</button>
+      <button class="tg" data-act="subminus" title="Smaller subtitles">A−</button>
+      <button class="tg" data-act="subplus" title="Bigger subtitles">A+</button>
     </div>
+    <div class="demo-frame">
+      <video id="demoVid" controls playsinline autoplay muted loop preload="metadata" poster="demo/poster.jpg">
+        <source src="demo/demo-lecture.mp4" type="video/mp4">
+        <track kind="subtitles" srclang="en" label="English" src="demo/demo-lecture.vtt">
+      </video>
+      <div class="demo-meta" id="demoMeta"><span class="k">Lecture:</span> Linear Regression — Intro to ML<br><span class="k">Date:</span> 30 Jun 2026</div>
+      <div class="demo-clock" id="demoClock">0:00 / 0:36</div>
+      <div class="demo-subs" id="demoSubs"></div>
+    </div>
+    <p class="demo-note">Muted for autoplay — <b>unmute in the player</b> for the Gemini narration. The clip and its sibling <code>.vtt</code> + <code>.json</code> live in the repo's <a href="https://github.com/nipunbatra/video-subtitle-overlay/tree/main/demo">demo/</a> folder; <a href="app.html">open the app</a> and load them to try every control.</p>
   </div>
-</div>
+</div><!-- /wrap -->
 
 <section id="features">
   <div class="wrap">
@@ -159,8 +192,9 @@
 └── talk.json     ← metadata overlay  (optional, or talk.txt)</pre>
     <p>Metadata as JSON renders as <code>key: value</code> lines:</p>
 <pre>{
-  "Lecture": "Introduction to Machine Learning, 14",
-  "Lecture Date": "20 Feb 2024"
+  "Lecture": "Linear Regression — Introduction to ML",
+  "Topic": "Fitting a line to data",
+  "Date": "30 Jun 2026"
 }</pre>
     <p>A plain <code>talk.txt</code> is shown as-is. Then:</p>
     <ol class="steps">
@@ -193,14 +227,24 @@
 
 <section id="run">
   <div class="wrap">
-    <h2>Run it locally</h2>
-    <p class="sub">No build step. Two ways:</p>
-    <ol class="steps">
-      <li>Use it online — just <a href="app.html">launch the hosted app</a> (file picking works over HTTPS too).</li>
-      <li>Or clone and open the file directly:</li>
-    </ol>
-<pre>git clone https://github.com/nipunbatra/video-subtitle-overlay
-open video-subtitle-overlay/app.html      # macOS</pre>
+    <h2>Run locally — just download one file</h2>
+    <p class="sub">No install, no sign-up, and <b>nothing is ever uploaded</b> — your videos stay on your machine. The whole app is the single file <code>app.html</code>.</p>
+
+    <p><b>1. Download <code>app.html</code></b></p>
+<pre><span style="color:var(--muted)"># macOS / Linux</span>
+curl -O https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html
+
+<span style="color:var(--muted)"># Windows (PowerShell)</span>
+iwr https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html -OutFile app.html</pre>
+    <p>No terminal? Open the <a href="https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html">raw file</a> and choose <b>Save Page As… → <code>app.html</code></b>.</p>
+
+    <p><b>2. Open it in Chrome</b></p>
+<pre><span style="color:var(--muted)">macOS  </span>  open -a "Google Chrome" app.html
+<span style="color:var(--muted)">Linux  </span>  google-chrome app.html        <span style="color:var(--muted)"># or: xdg-open app.html</span>
+<span style="color:var(--muted)">Windows</span>  start chrome app.html         <span style="color:var(--muted)"># or just double-click the file</span></pre>
+
+    <div class="note">A Chromium browser (Chrome, Edge, Brave) is recommended — <b>Pick folder</b> and <b>“share tab audio”</b> work best there. Prefer not to download? The <a href="app.html">hosted app</a> works too and still keeps every file on your machine.</div>
+    <p class="sub" style="margin-top:22px">Coming later: open videos straight from a shared <b>Google Drive</b> folder — same workflow, without downloading them first.</p>
   </div>
 </section>
 
@@ -210,6 +254,59 @@ open video-subtitle-overlay/app.html      # macOS</pre>
     <a href="https://github.com/nipunbatra/video-subtitle-overlay">github.com/nipunbatra/video-subtitle-overlay</a>
   </div>
 </footer>
+
+<script>
+/* Interactive demo: draw subtitles + live timecode over the clip and let visitors toggle
+   them, exactly like app.html. Cues are inlined so it works even from file:// (where
+   browsers block loading the .vtt text track). The real app reads the .vtt directly. */
+(function(){
+  var v = document.getElementById('demoVid');
+  if (!v) return;
+  var meta  = document.getElementById('demoMeta');
+  var subs  = document.getElementById('demoSubs');
+  var clock = document.getElementById('demoClock');
+  var cues = [
+    [0.000,  6.051, "Suppose we measure some data — each dot pairs an input x with an output y."],
+    [6.401, 11.252, "The points roughly follow a trend, so we model it with a straight line."],
+    [11.602,19.173, "That line is y = m·x + b — a slope and intercept we choose."],
+    [19.523,24.974, "For a line, the error is how far each point sits from it, vertically."],
+    [25.324,30.895, "Regression picks the slope and intercept that make the errors smallest."],
+    [31.245,36.576, "Then the fitted line predicts y for a new x — that's linear regression."]
+  ];
+  var metaOn = true, subsOn = true, clockOn = true, subPx = 0;  // subPx 0 = CSS-controlled
+
+  function fmt(t){ t = Math.max(0, Math.floor(t||0)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); }
+  function setSub(txt){
+    if (subs.dataset.t === txt) return;
+    subs.dataset.t = txt; subs.replaceChildren();
+    if (txt){ var sp = document.createElement('span'); sp.textContent = txt; subs.appendChild(sp); }
+  }
+  function tick(){
+    var t = v.currentTime || 0, cur = '';
+    if (subsOn){
+      for (var i=0;i<cues.length;i++){ if (t>=cues[i][0] && t<=cues[i][1]){ cur = cues[i][2]; break; } }
+      setSub(cur);
+    }
+    if (clockOn) clock.textContent = fmt(t) + ' / ' + fmt(isFinite(v.duration) ? v.duration : 36);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  /* toggle controls — mirror the app's m / s / t / b / +/- shortcuts */
+  document.querySelectorAll('.demo-bar .tg').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      switch (btn.dataset.act){
+        case 'meta':  metaOn  = !metaOn;  meta.classList.toggle('hidden', !metaOn);   btn.classList.toggle('on', metaOn);  break;
+        case 'subs':  subsOn  = !subsOn;  btn.classList.toggle('on', subsOn);  if (!subsOn) setSub(''); break;
+        case 'clock': clockOn = !clockOn; clock.classList.toggle('hidden', !clockOn); btn.classList.toggle('on', clockOn); break;
+        case 'pos':   var top = subs.classList.toggle('top'); btn.textContent = 'Subs: ' + (top ? 'top' : 'bottom'); btn.classList.toggle('on', top); break;
+        case 'subplus':  subPx = (subPx || 20) + 3; subs.style.fontSize = subPx + 'px'; break;
+        case 'subminus': subPx = Math.max(12, (subPx || 20) - 3); subs.style.fontSize = subPx + 'px'; break;
+      }
+    });
+  });
+})();
+</script>
 
 </body>
 </html>

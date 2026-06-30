@@ -1,0 +1,19 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:06.051
+Suppose we measure some data — each dot pairs an input x with an output y.
+
+00:00:06.401 --> 00:00:11.252
+The points roughly follow a trend, so we model it with a straight line.
+
+00:00:11.602 --> 00:00:19.173
+That line is y = m·x + b — a slope and intercept we choose.
+
+00:00:19.523 --> 00:00:24.974
+For a line, the error is how far each point sits from it, vertically.
+
+00:00:25.324 --> 00:00:30.895
+Regression picks the slope and intercept that make the errors smallest.
+
+00:00:31.245 --> 00:00:36.576
+Then the fitted line predicts y for a new x — that's linear regression.

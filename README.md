@@ -8,6 +8,12 @@ show up in the shared view (unlike OS-level captions or a separate window).
 **▶️ Live app:** https://nipunbatra.github.io/video-subtitle-overlay/app.html
 **📖 Docs:** https://nipunbatra.github.io/video-subtitle-overlay/
 
+## Demo
+
+A ~37-second **linear-regression explainer** — animated with [**Manim**](https://www.manim.community/) (the engine behind 3Blue1Brown) and narrated with **Gemini TTS**, with synced subtitles and a constant metadata overlay — lives in [`demo/`](demo/). Watch it on the **[live page](https://nipunbatra.github.io/video-subtitle-overlay/#demo)**, or open `demo/demo-lecture.mp4` (with its sibling `.vtt`/`.json`) in the app yourself.
+
+https://github.com/nipunbatra/video-subtitle-overlay/raw/main/demo/demo-lecture.mp4
+
 ## Features
 
 - **Auto-matched files** — pick a folder; each video finds its same-named `.vtt` subtitles and `.json`/`.txt` metadata.
@@ -32,8 +38,9 @@ my-folder/
 
 ```json
 {
-  "Lecture": "Introduction to Machine Learning, 14",
-  "Lecture Date": "20 Feb 2024"
+  "Lecture": "Linear Regression — Introduction to ML",
+  "Topic": "Fitting a line to data",
+  "Date": "30 Jun 2026"
 }
 ```
 
@@ -61,14 +68,37 @@ Then:
 | `p` | Presentation mode |
 | `⇧→` / `⇧←` | Next / previous video |
 
-## Run locally
+## Run locally — just download one file
 
-No build step:
+There's nothing to install and **nothing is ever uploaded** — your videos stay on your machine. The whole app is the single file [`app.html`](https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html). Download it, open it in Chrome, done.
 
-```bash
-git clone https://github.com/nipunbatra/video-subtitle-overlay
-open video-subtitle-overlay/app.html   # macOS
-```
+**1. Download `app.html`**
+
+- **macOS / Linux:**
+  ```bash
+  curl -O https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  iwr https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html -OutFile app.html
+  ```
+- **Or no command line:** open the [raw file](https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html), then **Save Page As… → `app.html`**.
+
+**2. Open it in Chrome**
+
+- **macOS:** `open -a "Google Chrome" app.html`
+- **Linux:** `google-chrome app.html`  *(or `xdg-open app.html`)*
+- **Windows:** `start chrome app.html`  *(or just double-click the file)*
+
+> A Chromium browser (Chrome, Edge, Brave) is recommended — **Pick folder** and **"share tab audio"** work best there.
+
+Then point the app at a folder of videos (see [Usage](#usage)). It all runs inside the browser tab: no server, no sign-up, no upload.
+
+*Developers:* you can still `git clone` the repo if you want the source and demo files.
+
+## Roadmap
+
+- **Open from Google Drive** — point the app at a shared Drive folder instead of a local one, so the same videos/subtitles/metadata can be played without downloading them first. *(Planned — today everything is strictly local.)*
 
 ## License
 
