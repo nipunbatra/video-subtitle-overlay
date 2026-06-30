@@ -182,6 +182,54 @@
   body.present { grid-template-columns: 0 1fr; grid-template-rows: 0 1fr; }
   body.present header, body.present aside { display: none; }
   .hidden { display: none !important; }
+
+  /* Metadata builder modal */
+  .mb-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.62);
+    display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+  }
+  .mb-backdrop.hidden { display: none; }
+  .mb {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    width: 540px; max-width: 100%; max-height: 90vh; overflow-y: auto; padding: 18px 20px;
+  }
+  .mb-head { display: flex; align-items: center; gap: 10px; }
+  .mb-head h2 { font-size: 16px; margin: 0; }
+  .mb-x { margin-left: auto; background: none; border: none; color: var(--muted); font-size: 15px; cursor: pointer; padding: 4px 8px; }
+  .mb-x:hover { color: var(--text); }
+  .mb-sub { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 6px 0 14px; }
+  .mb-sub code { color: var(--accent); }
+  .mb > label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .mb input[type=text] {
+    background: #0f131b; border: 1px solid var(--line); border-radius: 7px; color: var(--text);
+    padding: 7px 9px; font-size: 13px; width: 100%; font-family: inherit;
+  }
+  .mb input[type=text]:focus { outline: none; border-color: var(--accent); }
+  .mb-file-row { display: flex; align-items: center; gap: 6px; }
+  .mb-file-row span { color: var(--muted); font-size: 13px; }
+  .mb-rows { margin: 14px 0 8px; display: flex; flex-direction: column; gap: 8px; }
+  .mb-row { display: flex; gap: 8px; align-items: center; }
+  .mb-row .mb-k { flex: 0 0 38%; }
+  .mb-row .mb-v { flex: 1; }
+  .mb-del { background: #222733; border: 1px solid var(--line); color: var(--muted); border-radius: 7px; cursor: pointer; padding: 7px 10px; }
+  .mb-del:hover { color: #ff8a8a; border-color: #5a2b2b; }
+  .mb-add { background: #222733; border: 1px solid var(--line); color: var(--text); border-radius: 7px; padding: 7px 11px; cursor: pointer; font-size: 13px; }
+  .mb-add:hover { background: #2b3140; }
+  .mb-preview-wrap { margin: 16px 0; }
+  .mb-preview-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .mb-preview {
+    background: linear-gradient(135deg,#1a2030,#0a0d14); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; min-height: 22px; font-size: 14px; line-height: 1.5; white-space: pre-wrap;
+  }
+  .mb-preview .k { color: var(--accent); font-weight: 600; }
+  .mb-preview:empty::after { content: "Nothing yet — add a field above."; color: var(--muted); font-size: 12px; }
+  .mb-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; }
+  .mb-actions button {
+    background: #222733; border: 1px solid var(--line); color: var(--text); border-radius: 7px;
+    padding: 8px 13px; cursor: pointer; font-size: 13px;
+  }
+  .mb-actions button:hover { background: #2b3140; }
+  .mb-actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 </style>
 </head>
 <body>
@@ -193,6 +241,7 @@
   <label class="btn">Pick files
     <input type="file" id="fileInput" multiple accept="video/*,.vtt,.json,.txt">
   </label>
+  <button id="metaBuild" title="Build a metadata .json file">✎ New metadata</button>
   <div class="spacer"></div>
   <button id="metaToggle" title="Toggle metadata"><span class="lbl">Metadata: on</span><kbd>m</kbd></button>
   <button id="subToggle" title="Toggle subtitles"><span class="lbl">Subs: on</span><kbd>s</kbd></button>
@@ -212,6 +261,7 @@
     • <code>talk.mp4</code> — the video<br>
     • <code>talk.vtt</code> — subtitles<br>
     • <code>talk.json</code> or <code>talk.txt</code> — metadata overlay<br><br>
+    No metadata file yet? Click <b>✎ New metadata</b> to build one and download the <code>.json</code>.<br><br>
     You can also drag &amp; drop files (or a whole folder) anywhere on the page.<br><br>
     Share via Chrome tab (with "Share tab audio") — subtitles and metadata are drawn in the tab, so they show in the shared view.
 
@@ -244,6 +294,29 @@
   </div>
 </main>
 
+<div id="mbModal" class="mb-backdrop hidden" role="dialog" aria-modal="true" aria-label="Metadata builder">
+  <div class="mb">
+    <div class="mb-head">
+      <h2>✎ Metadata builder</h2>
+      <button id="mbClose" class="mb-x" title="Close (Esc)">✕</button>
+    </div>
+    <p class="mb-sub">Build the overlay shown on a video, then <b>download the <code>.json</code></b> and save it beside the video with the <b>same base name</b> (e.g. <code>talk.mp4</code> → <code>talk.json</code>).</p>
+    <label for="mbName">File name</label>
+    <div class="mb-file-row"><input id="mbName" type="text" placeholder="talk" spellcheck="false"><span>.json</span></div>
+    <div id="mbRows" class="mb-rows"></div>
+    <button id="mbAdd" class="mb-add">+ Add field</button>
+    <div class="mb-preview-wrap">
+      <div class="mb-preview-label">Overlay preview</div>
+      <div id="mbPreview" class="mb-preview"></div>
+    </div>
+    <div class="mb-actions">
+      <button id="mbApply" title="Show this on the current video now">Apply to current</button>
+      <button id="mbCopy">Copy JSON</button>
+      <button id="mbDownload" class="primary">Download .json</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const videoExts = ['mp4','webm','m4v','ogv','ogg','mov','mkv','avi'];
 const $ = id => document.getElementById(id);
@@ -260,6 +333,7 @@ let activeIdx = -1;
 let curKey = null;
 let curObjUrl = null;
 let showMeta = true, showSubs = true, showClock = true;
+let mbOpen = false;
 
 function fmtTime(s){
   if (!isFinite(s)) s = 0;
@@ -415,13 +489,18 @@ requestAnimationFrame(tick);
 
 /* ---------- metadata rendering ---------- */
 function renderMeta(text, type){
-  if (!showMeta || !text){ metaEl.innerHTML = ''; return; }
+  if (!showMeta || !text){ metaEl.replaceChildren(); return; }
   if (type === 'json'){
     try {
       const obj = JSON.parse(text);
-      metaEl.innerHTML = Object.entries(obj)
-        .map(([k,v]) => `<div><span class="k">${k}:</span> ${typeof v==='object'?JSON.stringify(v):v}</div>`)
-        .join('');
+      metaEl.replaceChildren();
+      for (const [k,v] of Object.entries(obj)){
+        const div = document.createElement('div');
+        const sp = document.createElement('span'); sp.className = 'k'; sp.textContent = k + ':';
+        div.appendChild(sp);
+        div.appendChild(document.createTextNode(' ' + (typeof v === 'object' ? JSON.stringify(v) : v)));
+        metaEl.appendChild(div);
+      }
       return;
     } catch(e){ /* fall through to raw */ }
   }
@@ -510,6 +589,7 @@ function togglePlay(){
 }
 
 document.addEventListener('keydown', e => {
+  if (mbOpen){ if (e.key === 'Escape') closeMb(); return; }
   if (e.target.tagName === 'INPUT') return;
   if (e.code === 'Space'){ e.preventDefault(); togglePlay(); return; }
   if (e.key === 'm') $('metaToggle').click();
@@ -557,6 +637,98 @@ document.addEventListener('drop', async e => {
   }
   if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
 });
+
+/* ---------- metadata builder ---------- */
+const mbModal = $('mbModal'), mbRows = $('mbRows'), mbPreview = $('mbPreview'), mbName = $('mbName');
+
+function mbAddRow(k='', v=''){
+  const row = document.createElement('div');
+  row.className = 'mb-row';
+  const ik = document.createElement('input'); ik.type='text'; ik.className='mb-k'; ik.placeholder='Key (e.g. Lecture)'; ik.value=k;
+  const iv = document.createElement('input'); iv.type='text'; iv.className='mb-v'; iv.placeholder='Value'; iv.value=v;
+  const del = document.createElement('button'); del.className='mb-del'; del.textContent='✕'; del.title='Remove field';
+  ik.addEventListener('input', mbUpdate);
+  iv.addEventListener('input', mbUpdate);
+  del.addEventListener('click', () => { row.remove(); mbUpdate(); });
+  row.append(ik, iv, del);
+  mbRows.appendChild(row);
+}
+function mbPairs(){
+  const out = [];
+  mbRows.querySelectorAll('.mb-row').forEach(r => {
+    const k = r.querySelector('.mb-k').value.trim();
+    const v = r.querySelector('.mb-v').value;
+    if (k) out.push([k, v]);
+  });
+  return out;
+}
+function mbJson(){
+  const o = {};
+  mbPairs().forEach(([k,v]) => o[k] = v);
+  return JSON.stringify(o, null, 2);
+}
+function mbUpdate(){
+  mbPreview.replaceChildren();
+  mbPairs().forEach(([k,v]) => {
+    const d = document.createElement('div');
+    const sp = document.createElement('span'); sp.className = 'k'; sp.textContent = k + ': ';
+    d.appendChild(sp); d.appendChild(document.createTextNode(v));
+    mbPreview.appendChild(d);
+  });
+}
+function openMb(){
+  mbRows.replaceChildren();
+  let prefilled = false;
+  if (curMetaType === 'json' && curMetaText){
+    try {
+      const o = JSON.parse(curMetaText);
+      Object.entries(o).forEach(([k,v]) => mbAddRow(k, typeof v === 'object' ? JSON.stringify(v) : String(v)));
+      prefilled = Object.keys(o).length > 0;
+    } catch(e){ /* fall through */ }
+  }
+  if (!prefilled){ mbAddRow('Lecture',''); mbAddRow('Date',''); }
+  const cur = activeIdx >= 0 ? items[activeIdx] : null;
+  mbName.value = cur ? cur.name : 'metadata';
+  mbUpdate();
+  mbModal.classList.remove('hidden');
+  mbOpen = true;
+}
+function closeMb(){ mbModal.classList.add('hidden'); mbOpen = false; }
+function mbSafeName(){
+  const n = (mbName.value || 'metadata').trim().replace(/\.json$/i,'').replace(/[\\/:*?"<>|]/g,'_');
+  return (n || 'metadata') + '.json';
+}
+
+$('metaBuild').onclick = openMb;
+$('mbClose').onclick = closeMb;
+$('mbAdd').onclick = () => { mbAddRow(); mbUpdate(); };
+mbModal.addEventListener('click', e => { if (e.target === mbModal) closeMb(); });
+
+$('mbApply').onclick = () => {
+  curMetaText = mbJson(); curMetaType = 'json';
+  if (activeIdx >= 0){
+    items[activeIdx].meta = new Blob([curMetaText], { type: 'application/json' });
+    items[activeIdx].metaType = 'json';
+    renderList();
+  }
+  showMeta = true; setLbl('metaToggle', 'Metadata: on');
+  renderMeta(curMetaText, curMetaType);
+  closeMb();
+};
+$('mbCopy').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(mbJson());
+    const b = $('mbCopy'); b.textContent = 'Copied!'; setTimeout(() => b.textContent = 'Copy JSON', 1200);
+  } catch(e){ /* clipboard blocked (e.g. file://) — use Download instead */ }
+};
+$('mbDownload').onclick = () => {
+  const blob = new Blob([mbJson()], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = mbSafeName();
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 </script>
 </body>
 </html>

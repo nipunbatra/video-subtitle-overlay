@@ -46,6 +46,8 @@ my-folder/
 
 A plain `talk.txt` is shown verbatim.
 
+> **Don't want to hand-write JSON?** Click **✎ New metadata** in the app — add fields with a live preview, then download a ready-to-use `.json` (named to match your video) or apply it to the current clip instantly.
+
 Then:
 
 1. Open the app and click **Pick folder** (or drag a folder onto the page).
