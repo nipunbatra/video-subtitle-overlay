@@ -71,7 +71,7 @@ Then:
 | `s` | Subtitles on / off |
 | `t` | Timecode on / off |
 | `b` | Subtitles bottom / top |
-| `g` | Subtitle background (box → lighter → faint → frosted → no-box) |
+| `g` | Overlay background — subtitles, metadata & timecode (box → lighter → faint → frosted → no-box) |
 | `+` / `−` | Subtitle size |
 | `]` / `[` | Metadata size |
 | `p` | Presentation mode |

@@ -96,13 +96,20 @@
     box-decoration-break: clone; -webkit-box-decoration-break: clone;
   }
   .demo-frame .demo-subs.top { top: 9%; bottom: auto; }
-  .demo-frame .demo-subs.bg-light span   { background: rgba(0,0,0,0.35); }
-  .demo-frame .demo-subs.bg-faint span   { background: rgba(0,0,0,0.16); }
-  .demo-frame .demo-subs.bg-blur span    { background: rgba(0,0,0,0.28); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
-  .demo-frame .demo-subs.bg-glow span    { background: transparent; }
-  .demo-frame .demo-subs.bg-glow         { text-shadow: 0 1px 4px #000, 0 0 6px #000, 0 0 12px #000; }
-  .demo-frame .demo-subs.bg-outline span { background: transparent; }
-  .demo-frame .demo-subs.bg-outline      { text-shadow: -1.2px -1.2px 0 #000, 1.2px -1.2px 0 #000, -1.2px 1.2px 0 #000, 1.2px 1.2px 0 #000, 0 0 5px rgba(0,0,0,.55); }
+  .demo-frame.bg-light   .demo-subs span { background: rgba(0,0,0,0.35); }
+  .demo-frame.bg-faint   .demo-subs span { background: rgba(0,0,0,0.16); }
+  .demo-frame.bg-blur    .demo-subs span { background: rgba(0,0,0,0.28); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+  .demo-frame.bg-glow    .demo-subs span,
+  .demo-frame.bg-outline .demo-subs span { background: transparent; }
+  .demo-frame.bg-glow    .demo-subs { text-shadow: 0 1px 4px #000, 0 0 6px #000, 0 0 12px #000; }
+  .demo-frame.bg-outline .demo-subs { text-shadow: -1.2px -1.2px 0 #000, 1.2px -1.2px 0 #000, -1.2px 1.2px 0 #000, 1.2px 1.2px 0 #000, 0 0 5px rgba(0,0,0,.55); }
+  .demo-frame.bg-light   .demo-meta, .demo-frame.bg-light   .demo-clock { background: rgba(10,12,18,0.50); }
+  .demo-frame.bg-faint   .demo-meta, .demo-frame.bg-faint   .demo-clock { background: rgba(10,12,18,0.26); border-color: rgba(255,255,255,0.07); }
+  .demo-frame.bg-blur    .demo-meta, .demo-frame.bg-blur    .demo-clock { background: rgba(10,12,18,0.32); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+  .demo-frame.bg-glow    .demo-meta, .demo-frame.bg-glow    .demo-clock,
+  .demo-frame.bg-outline .demo-meta, .demo-frame.bg-outline .demo-clock { background: transparent; border-color: transparent; }
+  .demo-frame.bg-glow    .demo-meta, .demo-frame.bg-glow    .demo-clock { text-shadow: 0 1px 4px #000, 0 0 6px #000, 0 0 10px #000; }
+  .demo-frame.bg-outline .demo-meta, .demo-frame.bg-outline .demo-clock { text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px rgba(0,0,0,.6); }
 
   .demo { max-width: 860px; margin: 30px auto 6px; }
   .demo-cap { text-align: center; color: var(--muted); font-size: 15px; margin: 0 auto 14px; max-width: 700px; }
@@ -256,7 +263,7 @@
       <tr><td><kbd>s</kbd></td><td>Subtitles on / off</td></tr>
       <tr><td><kbd>t</kbd></td><td>Timecode on / off</td></tr>
       <tr><td><kbd>b</kbd></td><td>Subtitles bottom / top</td></tr>
-      <tr><td><kbd>g</kbd></td><td>Subtitle background (box → light → faint → frosted → no-box)</td></tr>
+      <tr><td><kbd>g</kbd></td><td>Overlay background — subtitles, metadata &amp; timecode (box → light → faint → frosted → no-box)</td></tr>
       <tr><td><kbd>+</kbd> <kbd>−</kbd></td><td>Subtitle size</td></tr>
       <tr><td><kbd>]</kbd> <kbd>[</kbd></td><td>Metadata size</td></tr>
       <tr><td><kbd>p</kbd></td><td>Presentation mode</td></tr>
@@ -306,6 +313,7 @@ iwr https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app
   var subs  = document.getElementById('demoSubs');
   var clock = document.getElementById('demoClock');
   var lp = document.getElementById('lpSubs');
+  var frame = document.querySelector('.demo-frame');
   var cues = [
     [0.000,  6.051, "Suppose we measure some data — each dot pairs an input x with an output y."],
     [6.401, 11.252, "The points roughly follow a trend, so we model it with a straight line."],
@@ -355,9 +363,9 @@ iwr https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app
         case 'clock': clockOn = !clockOn; clock.classList.toggle('hidden', !clockOn); btn.classList.toggle('on', clockOn); break;
         case 'pos':   var top = subs.classList.toggle('top'); btn.textContent = 'Subs: ' + (top ? 'top' : 'bottom'); btn.classList.toggle('on', top); break;
         case 'bg':
-          DEMO_BG.forEach(function(s){ if (s[0]){ subs.classList.remove(s[0]); if (lp) lp.classList.remove(s[0]); } });
+          DEMO_BG.forEach(function(s){ if (s[0]){ frame.classList.remove(s[0]); if (lp) lp.classList.remove(s[0]); } });
           demoBgIdx = (demoBgIdx + 1) % DEMO_BG.length;
-          if (DEMO_BG[demoBgIdx][0]){ subs.classList.add(DEMO_BG[demoBgIdx][0]); if (lp) lp.classList.add(DEMO_BG[demoBgIdx][0]); }
+          if (DEMO_BG[demoBgIdx][0]){ frame.classList.add(DEMO_BG[demoBgIdx][0]); if (lp) lp.classList.add(DEMO_BG[demoBgIdx][0]); }
           btn.textContent = 'BG: ' + DEMO_BG[demoBgIdx][1];
           btn.classList.toggle('on', demoBgIdx !== 0);
           break;

@@ -173,14 +173,23 @@
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
   }
-  /* subtitle background styles (cycled with the BG button / g) */
-  #subs.bg-light span   { background: rgba(0,0,0,0.35); }
-  #subs.bg-faint span   { background: rgba(0,0,0,0.16); }
-  #subs.bg-blur span    { background: rgba(0,0,0,0.28); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
-  #subs.bg-glow span    { background: transparent; }
-  #subs.bg-glow         { text-shadow: 0 1px 4px #000, 0 0 6px #000, 0 0 12px #000; }
-  #subs.bg-outline span { background: transparent; }
-  #subs.bg-outline      { text-shadow: -1.2px -1.2px 0 #000, 1.2px -1.2px 0 #000, -1.2px 1.2px 0 #000, 1.2px 1.2px 0 #000, 0 0 5px rgba(0,0,0,.55); }
+  /* overlay background styles — cycled with the BG button / g; applied to the
+     whole stage so subtitles, metadata and timecode all change together */
+  .stage.bg-light   #subs span { background: rgba(0,0,0,0.35); }
+  .stage.bg-faint   #subs span { background: rgba(0,0,0,0.16); }
+  .stage.bg-blur    #subs span { background: rgba(0,0,0,0.28); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+  .stage.bg-glow    #subs span,
+  .stage.bg-outline #subs span { background: transparent; }
+  .stage.bg-glow    #subs { text-shadow: 0 1px 4px #000, 0 0 6px #000, 0 0 12px #000; }
+  .stage.bg-outline #subs { text-shadow: -1.2px -1.2px 0 #000, 1.2px -1.2px 0 #000, -1.2px 1.2px 0 #000, 1.2px 1.2px 0 #000, 0 0 5px rgba(0,0,0,.55); }
+
+  .stage.bg-light   #meta, .stage.bg-light   #clock { background: rgba(10,12,18,0.50); }
+  .stage.bg-faint   #meta, .stage.bg-faint   #clock { background: rgba(10,12,18,0.26); border-color: rgba(255,255,255,0.07); }
+  .stage.bg-blur    #meta, .stage.bg-blur    #clock { background: rgba(10,12,18,0.32); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+  .stage.bg-glow    #meta, .stage.bg-glow    #clock,
+  .stage.bg-outline #meta, .stage.bg-outline #clock { background: transparent; border-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .stage.bg-glow    #meta, .stage.bg-glow    #clock { text-shadow: 0 1px 4px #000, 0 0 6px #000, 0 0 10px #000; }
+  .stage.bg-outline #meta, .stage.bg-outline #clock { text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px rgba(0,0,0,.6); }
   #subs.top { top: 8%; bottom: auto; }
   #subs:empty { display: none; }
 
@@ -258,7 +267,7 @@
   <button id="subToggle" title="Toggle subtitles"><span class="lbl">Subs: on</span><kbd>s</kbd></button>
   <button id="clockToggle" title="Toggle timecode"><span class="lbl">Time: on</span><kbd>t</kbd></button>
   <button id="subPos" title="Subtitle position"><span class="lbl">Subs: bottom</span><kbd>b</kbd></button>
-  <button id="subBg" title="Subtitle background style"><span class="lbl">BG: Solid</span><kbd>g</kbd></button>
+  <button id="subBg" title="Overlay background style (subtitles, metadata, timecode)"><span class="lbl">BG: Solid</span><kbd>g</kbd></button>
   <button id="subMinus" title="Smaller subtitles">Sub A−<kbd>−</kbd></button>
   <button id="subPlus" title="Bigger subtitles">Sub A+<kbd>+</kbd></button>
   <button id="metaMinus" title="Smaller metadata">Meta A−<kbd>[</kbd></button>
@@ -284,7 +293,7 @@
       <div><kbd>s</kbd> subtitles on / off</div>
       <div><kbd>t</kbd> timecode on / off</div>
       <div><kbd>b</kbd> subtitles top / bottom</div>
-      <div><kbd>g</kbd> subtitle background style</div>
+      <div><kbd>g</kbd> overlay background style</div>
       <div><kbd>+</kbd> <kbd>−</kbd> subtitle size</div>
       <div><kbd>]</kbd> <kbd>[</kbd> metadata size</div>
       <div><kbd>p</kbd> presentation mode</div>
@@ -574,9 +583,10 @@ const SUB_BG = [
 ];
 let subBgIdx = 0;
 function applySubBg(){
-  SUB_BG.forEach(s => { if (s.cls) subsEl.classList.remove(s.cls); });
+  const stage = document.querySelector('.stage');
+  SUB_BG.forEach(s => { if (s.cls) stage.classList.remove(s.cls); });
   const s = SUB_BG[subBgIdx] || SUB_BG[0];
-  if (s.cls) subsEl.classList.add(s.cls);
+  if (s.cls) stage.classList.add(s.cls);
   setLbl('subBg', 'BG: ' + s.label);
 }
 
