@@ -75,6 +75,25 @@ def test_blocked_full_buffer_falls_back_to_streaming(app):
     assert app.evaluate("items[0].buffer") is True
 
 
+def test_buffer_rejects_a_truncated_response(app):
+    message = app.evaluate("""async () => {
+        const originalFetch = window.fetch;
+        window.fetch = async () => new Response(new Uint8Array([1]), {
+          status: 200,
+          headers: {'content-type': 'video/mp4', 'content-length': '3'},
+        });
+        try {
+          await fetchBufferedMedia('https://example.test/truncated.mp4');
+          return '';
+        } catch (error) {
+          return error.message;
+        } finally {
+          window.fetch = originalFetch;
+        }
+    }""")
+    assert message == "the download was incomplete (1 of 3 bytes)"
+
+
 def test_drive_failure_is_actionable_and_recoverable(app):
     app.route(DRIVE_MEDIA, lambda route: route.abort())
     add_link(app, DRIVE_LINK)
@@ -111,4 +130,3 @@ def test_drop_direct_video_url(app):
     }""", REMOTE_URL)
     app.wait_for_function("items.length === 1 && items[0].type === 'remote'")
     app.wait_for_function("video.currentTime > 0.2", timeout=10_000)
-

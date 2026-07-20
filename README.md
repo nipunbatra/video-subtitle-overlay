@@ -5,10 +5,10 @@ inside a single self-contained HTML file. Built for **sharing a Chrome tab** ove
 Zoom, or any screen share — because the subtitles and metadata are drawn into the page, they
 show up in the shared view (unlike OS-level captions or a separate window).
 
-FrameCue is the playback companion to **[FrameCut](https://nipunbatra.github.io/video-trim-metadata-store/)**, which trims Drive videos and saves metadata sidecars.
+FrameCue is the playback companion to **[FrameCut](https://nipunbatra.github.io/framecut/)**, which trims Drive videos and saves metadata sidecars.
 
-**▶️ Live app:** https://nipunbatra.github.io/video-subtitle-overlay/app.html
-**📖 Docs:** https://nipunbatra.github.io/video-subtitle-overlay/
+**▶️ Live app:** https://nipunbatra.github.io/framecue/app.html
+**📖 Docs:** https://nipunbatra.github.io/framecue/
 
 ## Demo
 
@@ -18,9 +18,9 @@ A ~37-second **linear-regression explainer** narrated with **Gemini TTS**, with 
 - `demo-lecture-light.mp4` — the same animation on a **light** background
 - `demo-lecture-slides.mp4` — a **light lecture-slides** montage
 
-On the **[live page](https://nipunbatra.github.io/video-subtitle-overlay/#demo)** you can switch between them and cycle the **subtitle background** (`g`) — the effect is most visible on the light clips. Or open any `demo/*.mp4` (with its sibling `.vtt`/`.json`) in the app.
+On the **[live page](https://nipunbatra.github.io/framecue/#demo)** you can switch between them and cycle the **subtitle background** (`g`) — the effect is most visible on the light clips. Or open any `demo/*.mp4` (with its sibling `.vtt`/`.json`) in the app.
 
-https://github.com/nipunbatra/video-subtitle-overlay/raw/main/demo/demo-lecture.mp4
+https://github.com/nipunbatra/framecue/raw/main/demo/demo-lecture.mp4
 
 ## Features
 
@@ -82,7 +82,7 @@ Drive folder links are intentionally rejected: add the individual video file lin
 
 Private Drive access uses **Sign in with Google**, the Drive REST API, and the read-only `drive.readonly` scope. The app can list Drive file names and folders so you can browse to a video, and it can download the video you select. It cannot upload, edit, share, or delete Drive files and does not request Gmail access. Access tokens remain in memory and disappear on reload. **Menu → Disconnect Google Drive** revokes the grant.
 
-The hosted app is already configured with the same public, origin-restricted Web OAuth client used by [FrameCut](https://github.com/nipunbatra/video-trim-metadata-store). No API key is required, and visitors never need to enter an OAuth identifier. The normal flow is simply **Menu → Open from Google Drive → Continue with Google**.
+The hosted app is already configured with the same public, origin-restricted Web OAuth client used by [FrameCut](https://github.com/nipunbatra/framecut). No API key is required, and visitors never need to enter an OAuth identifier. The normal flow is simply **Menu → Open from Google Drive → Continue with Google**.
 
 A fork on a different web origin needs one-time Google Cloud configuration:
 
@@ -113,7 +113,7 @@ A linked video's *base name* is its **YouTube/Drive ID** or the direct URL's fil
 
 YouTube notes:
 
-- Works on the **[hosted app](https://nipunbatra.github.io/video-subtitle-overlay/app.html)** or any http-served copy. YouTube refuses to play inside a page opened as a **local file** (`file://` sends no referrer → YouTube error 153) — if you downloaded `app.html`, serve it first: `python3 -m http.server 5173`, then open `http://localhost:5173/app.html`. Local videos are unaffected either way.
+- Works on the **[hosted app](https://nipunbatra.github.io/framecue/app.html)** or any http-served copy. YouTube refuses to play inside a page opened as a **local file** (`file://` sends no referrer → YouTube error 153) — if you downloaded `app.html`, serve it first: `python3 -m http.server 5173`, then open `http://localhost:5173/app.html`. Local videos are unaffected either way.
 - Videos whose owner disabled embedding won't play (YouTube error 150/101).
 - Keyboard shortcuts work while the embedded player isn't focused.
 
@@ -144,19 +144,19 @@ Then:
 
 ## Run locally — just download one file
 
-There's nothing to install. Local files are not uploaded; remote links connect only to the host you supplied. The whole app is the single file [`app.html`](https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html). Download it from **Menu → Download raw HTML**, or use the commands below.
+There's nothing to install. Local files are not uploaded; remote links connect only to the host you supplied. The whole app is the single file [`app.html`](https://raw.githubusercontent.com/nipunbatra/framecue/main/app.html). Download it from **Menu → Download raw HTML**, or use the commands below.
 
 **1. Download `app.html`**
 
 - **macOS / Linux:**
   ```bash
-  curl -O https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html
+  curl -O https://raw.githubusercontent.com/nipunbatra/framecue/main/app.html
   ```
 - **Windows (PowerShell):**
   ```powershell
-  iwr https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html -OutFile app.html
+  iwr https://raw.githubusercontent.com/nipunbatra/framecue/main/app.html -OutFile app.html
   ```
-- **Or no command line:** open the [raw file](https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html), then **Save Page As… → `app.html`**.
+- **Or no command line:** open the [raw file](https://raw.githubusercontent.com/nipunbatra/framecue/main/app.html), then **Save Page As… → `app.html`**.
 
 **2. Open it in Chrome**
 

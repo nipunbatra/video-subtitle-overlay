@@ -140,6 +140,19 @@ def test_parse_vtt_drops_nan_timings(app):
     assert [c["text"] for c in cues] == ["ok"]
 
 
+def test_parse_vtt_drops_zero_or_reversed_ranges(app):
+    cues = app.evaluate("t => parseVTT(t)",
+        "WEBVTT\n\n00:02.000 --> 00:01.000\nreverse\n\n"
+        "00:03.000 --> 00:03.000\nzero\n\n00:04.000 --> 00:05.000\nok\n")
+    assert cues == [{"start": 4, "end": 5, "text": "ok"}]
+
+
+def test_drive_query_literal_escapes_quotes_and_backslashes(app):
+    assert app.evaluate("v => escapeDriveQueryLiteral(v)", "folder\\part'quoted") == (
+        "folder\\\\part\\'quoted"
+    )
+
+
 @pytest.mark.parametrize("text,expected", [
     ("01:02:03.5", 3723.5),
     ("02:03", 123),

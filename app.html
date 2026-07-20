@@ -465,8 +465,8 @@
       <button id="menuPickFiles" type="button" role="menuitem"><span>Pick individual files…</span><small>video or sidecars</small></button>
       <button id="menuMetaBuild" type="button" role="menuitem"><span>New metadata…</span><small>build a JSON file</small></button>
       <button id="menuPresent" type="button" role="menuitem"><span>Presentation mode</span><small>press p to exit</small></button>
-      <a href="https://nipunbatra.github.io/video-trim-metadata-store/" target="_blank" rel="noopener noreferrer" role="menuitem"><span>FrameCut</span><small>trim Drive video</small></a>
-      <a href="https://github.com/nipunbatra/video-subtitle-overlay" target="_blank" rel="noopener noreferrer" role="menuitem"><span>Documentation and source</span><small>GitHub</small></a>
+      <a href="https://nipunbatra.github.io/framecut/" target="_blank" rel="noopener noreferrer" role="menuitem"><span>FrameCut</span><small>trim Drive video</small></a>
+      <a href="https://github.com/nipunbatra/framecue" target="_blank" rel="noopener noreferrer" role="menuitem"><span>Documentation and source</span><small>GitHub</small></a>
       <a href="privacy.html" target="_blank" rel="noopener noreferrer" role="menuitem"><span>Privacy</span><small>Google data use</small></a>
       <div class="menu-rule" role="separator"></div>
       <div class="menu-heading">Overlay controls</div>
@@ -533,7 +533,7 @@
         <div><kbd>⇧</kbd><kbd>→</kbd> / <kbd>⇧</kbd><kbd>←</kbd> next / prev</div>
       </div>
     </details>
-    <a class="docs-link" href="https://github.com/nipunbatra/video-subtitle-overlay">Docs &amp; source on GitHub →</a>
+    <a class="docs-link" href="https://github.com/nipunbatra/framecue">Docs &amp; source on GitHub →</a>
   </div>
 </aside>
 
@@ -651,18 +651,19 @@ let showMeta = true, showSubs = true, showClock = true;
 let mbOpen = false, sourceOpen = false, driveModalOpen = false, driveBrowserOpen = false;
 let loadGeneration = 0, remoteController = null, bufferingRemote = false;
 
-const RAW_APP_URL = 'https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html';
+const RAW_APP_URL = 'https://raw.githubusercontent.com/nipunbatra/framecue/main/app.html';
 const RETIRED_GOOGLE_CONFIG_KEYS = ['vso-google-config-v1', 'vso-google-config-v2'];
 const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 const GOOGLE_DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const GOOGLE_FOLDER_MIME = 'application/vnd.google-apps.folder';
-// Public, origin-restricted browser client shared with video-trim-metadata-store.
+// Public, origin-restricted browser client shared with FrameCut.
 // It is not a secret; never add its client secret, access token, or refresh token here.
 const GOOGLE_OAUTH_CLIENT_ID = '754571415429-dve19qtjfntr104sk8a70tb4rt79mgsc.apps.googleusercontent.com';
 // Remove configuration saved by older builds, including retired Picker API keys.
 try { RETIRED_GOOGLE_CONFIG_KEYS.forEach(key => localStorage.removeItem(key)); } catch(_e){}
 let googleLibrariesPromise = null, googleTokenClient = null, googleAuthReady = false;
 let googleAccessToken = null, googleTokenExpiresAt = 0;
+let googleAuthPending = false;
 
 const itemKey = it => it.key || (it.dir + '||' + it.name);
 
@@ -835,7 +836,7 @@ function parseVTT(text){
     const idx = lines.indexOf(timing);
     const txt = lines.slice(idx+1).join('\n').replace(/<[^>]+>/g,'');
     const start = toSeconds(m[1]), end = toSeconds(m[2]);
-    if (!isFinite(start) || !isFinite(end)) continue;
+    if (!isFinite(start) || !isFinite(end) || end <= start) continue;
     res.push({ start, end, text: txt });
   }
   res.sort((a,b)=>a.start-b.start);
@@ -974,6 +975,10 @@ async function fetchBufferedMedia(url, { signal, headers={}, fallbackType='video
       const blob = await response.blob();
       if (blob.size > MAX_BUFFER_BYTES) throw new Error('the file exceeded the 1 GB in-memory buffer limit');
       chunks.push(blob); received = blob.size;
+    }
+    const encoding = (response.headers.get('content-encoding') || '').toLowerCase();
+    if (total && (!encoding || encoding === 'identity') && received !== total){
+      throw new Error(`the download was incomplete (${received} of ${total} bytes)`);
     }
     return { blob: new Blob(chunks, { type: type || fallbackType }), received };
 }
@@ -1203,7 +1208,7 @@ function loadYtApi(){
 }
 
 const YT_MSG_FILE = 'YouTube blocks players on pages opened as local files (no referrer — error 153). ' +
-  'Use the hosted app at nipunbatra.github.io/video-subtitle-overlay/app.html, or serve this file over http ' +
+  'Use the hosted app at nipunbatra.github.io/framecue/app.html, or serve this file over http ' +
   '(e.g. "python3 -m http.server 5173" then open http://localhost:5173/app.html). Local videos work fine either way.';
 const YT_ERRORS = {
   2: 'Invalid YouTube video ID.',
@@ -1446,6 +1451,8 @@ async function prepareGoogleLibraries(){
     scope: GOOGLE_DRIVE_SCOPE,
     callback: handleGoogleToken,
     error_callback: e => {
+      googleAuthPending = false;
+      driveConnect.disabled = false;
       setDriveStatus(e && e.type === 'popup_closed' ? 'Google account selection was closed.' : 'Google authorization could not start.', 'error');
     },
   });
@@ -1468,10 +1475,20 @@ driveRetry.onclick = async () => {
 $('driveConnect').onclick = () => {
   if (hasGoogleToken()){ closeDriveModal(); showGoogleDriveBrowser(); return; }
   if (!googleTokenClient){ setDriveStatus('Google authorization is not ready. Retry the connection.', 'error'); driveRetry.classList.remove('hidden'); return; }
+  if (googleAuthPending) return;
+  googleAuthPending = true;
+  driveConnect.disabled = true;
   setDriveStatus('Waiting for Google Account selection…');
-  googleTokenClient.requestAccessToken({ prompt: 'select_account' });
+  try { googleTokenClient.requestAccessToken({ prompt: 'select_account' }); }
+  catch(e){
+    googleAuthPending = false; driveConnect.disabled = false;
+    setDriveStatus('Google authorization could not start.', 'error');
+  }
 };
 function handleGoogleToken(response){
+  if (!googleAuthPending) return;
+  googleAuthPending = false;
+  driveConnect.disabled = false;
   if (!response || response.error || !response.access_token){
     setDriveStatus('Google did not grant Drive access.', 'error'); return;
   }
@@ -1483,7 +1500,7 @@ function handleGoogleToken(response){
   updateDriveMenu(); closeDriveModal(); showGoogleDriveBrowser();
 }
 
-let driveBrowseGeneration = 0;
+let driveBrowseGeneration = 0, driveBrowseController = null;
 
 function driveBrowserTrapFocus(e){
   const f = [...driveBrowserModal.querySelectorAll('button')].filter(el => !el.disabled && el.offsetParent !== null);
@@ -1494,6 +1511,7 @@ function driveBrowserTrapFocus(e){
 }
 function closeDriveBrowser(){
   ++driveBrowseGeneration;
+  if (driveBrowseController){ driveBrowseController.abort(); driveBrowseController = null; }
   driveBrowserModal.classList.add('hidden'); driveBrowserOpen = false;
   driveBrowserList.setAttribute('aria-busy', 'false');
   if (driveLastFocus && driveLastFocus.focus) driveLastFocus.focus();
@@ -1540,24 +1558,35 @@ function driveItemButton(file, crumbs){
   button.append(icon, info, kind);
   return button;
 }
+function escapeDriveQueryLiteral(value){
+  return String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
 async function browseDriveFolder(folderId, crumbs){
   if (!hasGoogleToken()){ closeDriveBrowser(); openDriveModal(); return; }
   const generation = ++driveBrowseGeneration;
+  if (driveBrowseController) driveBrowseController.abort();
+  const controller = new AbortController();
+  driveBrowseController = controller;
   renderDriveBreadcrumbs(crumbs);
   driveBrowserList.replaceChildren(); driveBrowserList.setAttribute('aria-busy', 'true');
   setDriveBrowserStatus('Loading this folder…');
   try {
     const files = [];
     let pageToken = '';
+    const seenPageTokens = new Set();
     do {
+      if (seenPageTokens.has(pageToken)) throw new Error('Google Drive repeated a page token. Retry this folder.');
+      seenPageTokens.add(pageToken);
+      const escapedFolderId = escapeDriveQueryLiteral(folderId);
       const params = new URLSearchParams({
-        q: `'${folderId.replace(/'/g, "\\'")}' in parents and trashed=false`,
+        q: `'${escapedFolderId}' in parents and trashed=false`,
         fields: 'nextPageToken,files(id,name,mimeType,size,modifiedTime)',
         orderBy: 'folder,name', pageSize: '1000', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true',
       });
       if (pageToken) params.set('pageToken', pageToken);
       const response = await fetch(GOOGLE_DRIVE_API + '/files?' + params, {
         headers: { Authorization: 'Bearer ' + googleAccessToken },
+        signal: controller.signal,
       });
       if (response.status === 401 || response.status === 403){
         googleAccessToken = null; googleTokenExpiresAt = 0; updateDriveMenu(); closeDriveBrowser();
@@ -1585,12 +1614,16 @@ async function browseDriveFolder(folderId, crumbs){
     const videos = files.length - folders;
     setDriveBrowserStatus(`${folders} folder${folders === 1 ? '' : 's'} · ${videos} video${videos === 1 ? '' : 's'}`);
   } catch(e){
+    if (e.name === 'AbortError') return;
     if (generation !== driveBrowseGeneration) return;
     setDriveBrowserStatus('Could not list this folder: ' + e.message, 'error');
     const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Retry';
     retry.onclick = () => browseDriveFolder(folderId, crumbs); driveBrowserList.appendChild(retry);
   } finally {
-    if (generation === driveBrowseGeneration) driveBrowserList.setAttribute('aria-busy', 'false');
+    if (generation === driveBrowseGeneration){
+      driveBrowserList.setAttribute('aria-busy', 'false');
+      if (driveBrowseController === controller) driveBrowseController = null;
+    }
   }
 }
 function showGoogleDriveBrowser(){
@@ -1625,6 +1658,7 @@ function addAuthenticatedDriveFile(doc){
 }
 function clearGoogleAuthorization(revoke=true){
   const token = googleAccessToken;
+  googleAuthPending = false; driveConnect.disabled = false;
   googleAccessToken = null; googleTokenExpiresAt = 0;
   if (driveBrowserOpen) closeDriveBrowser();
   if (revoke && token && window.google && google.accounts && google.accounts.oauth2){

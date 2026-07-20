@@ -219,6 +219,21 @@ def test_compact_mobile_header_and_clear_empty_state(app):
     assert not app.evaluate("document.body.classList.contains('present')")
 
 
+def test_framecue_brand_and_companion_links_use_renamed_sites(app):
+    assert app.title() == "FrameCue — video overlays for sharing"
+    assert app.text_content("header h1") == "FrameCue"
+
+    app.click("#menuToggle")
+    companion = app.get_by_role("menuitem", name="FrameCut trim Drive video")
+    assert companion.get_attribute("href") == "https://nipunbatra.github.io/framecut/"
+    source = app.get_by_role("menuitem", name="Documentation and source GitHub")
+    assert source.get_attribute("href") == "https://github.com/nipunbatra/framecue"
+
+    html = app.content()
+    assert "video-subtitle-overlay" not in html
+    assert "video-trim-metadata-store" not in html
+
+
 def test_mobile_overlays_do_not_collide_and_library_is_accessible(app):
     app.set_viewport_size({"width": 390, "height": 760})
     setup_video(app)

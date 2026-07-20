@@ -220,6 +220,49 @@ def test_browser_follows_pagination_and_folder_breadcrumbs(app):
     assert all(call[2] == "Bearer test-access-token" for call in calls)
 
 
+def test_browser_stops_on_a_repeated_page_token(app):
+    calls = []
+
+    def repeat_token(route, request):
+        calls.append(request.url)
+        fulfill_listing(route, [], next_page="stuck-token")
+
+    app.route(LIST_API, repeat_token)
+    configure(app)
+    app.click("#driveConnect")
+    app.wait_for_function("driveBrowserStatus.textContent.includes('repeated a page token')")
+
+    assert len(calls) == 2
+    assert app.locator("#driveBrowserList button", has_text="Retry").count() == 1
+    assert app.get_attribute("#driveBrowserList", "aria-busy") == "false"
+
+
+def test_connect_coalesces_double_clicks_and_disables_while_pending(app):
+    app.route(LIST_API, lambda route: fulfill_listing(route, []))
+    configure(app)
+    app.evaluate("""() => {
+      window.__googleTokenDelay = 100;
+      driveConnect.onclick();
+      driveConnect.onclick();
+    }""")
+
+    assert app.locator("#driveConnect").is_disabled()
+    app.wait_for_function("driveBrowserOpen")
+    requests = app.evaluate("__googleLog.filter(x => x.startsWith('request-token:'))")
+    assert requests == ["request-token:select_account"]
+    assert app.evaluate("googleAuthPending") is False
+
+
+def test_connect_error_reenables_the_action(app):
+    configure(app)
+    app.evaluate("window.__googleTokenError = {type: 'popup_closed'}")
+    app.click("#driveConnect")
+    app.wait_for_function("driveStatus.textContent.includes('closed')")
+
+    assert not app.locator("#driveConnect").is_disabled()
+    assert app.evaluate("googleAuthPending") is False
+
+
 def test_google_script_failure_can_retry(page, http_root):
     page.route("https://accounts.google.com/gsi/client", lambda route: route.abort())
     page.goto(f"{http_root}/app.html")
