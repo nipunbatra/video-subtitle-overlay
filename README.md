@@ -78,24 +78,23 @@ Drive folder links are intentionally rejected: add the individual video file lin
 
 #### Private Google Drive setup
 
-Private Drive access uses **Sign in with Google**, the official Google Picker, and the narrow `drive.file` scope. The user chooses one file in Google's UI; the app does not request Gmail access or permission to list the whole Drive. Access tokens remain in memory and disappear on reload. **Menu → Disconnect Google Drive** revokes the grant.
+Private Drive access uses **Sign in with Google**, the Drive REST API, and the read-only `drive.readonly` scope. The app can list Drive file names and folders so you can browse to a video, and it can download the video you select. It cannot upload, edit, share, or delete Drive files and does not request Gmail access. Access tokens remain in memory and disappear on reload. **Menu → Disconnect Google Drive** revokes the grant.
 
-The hosted app is already configured with the same public, origin-restricted Web OAuth client and Picker API key used by [`video-trim-metadata-store`](https://github.com/nipunbatra/video-trim-metadata-store). These are browser identifiers, not secrets. Its client secret and reusable tokens are **not** copied. On the hosted app the normal flow is simply **Menu → Open from Google Drive → Continue with Google**.
+The hosted app is already configured with the same public, origin-restricted Web OAuth client used by [`video-trim-metadata-store`](https://github.com/nipunbatra/video-trim-metadata-store). This browser client ID is not a secret. Its client secret and reusable tokens are **not** copied, and no API key is required. On the hosted app the normal flow is simply **Menu → Open from Google Drive → Continue with Google**.
 
 A fork on a different web origin needs one-time Google Cloud configuration:
 
 1. Create or select a Google Cloud project.
-2. Enable both the **Google Drive API** and **Google Picker API**.
+2. Enable the **Google Drive API**.
 3. Configure the Google Auth consent screen and add this repo's [`privacy.html`](privacy.html) URL.
 4. Create an **OAuth client ID → Web application**. Add the exact app origins under **Authorized JavaScript origins**, for example:
    - `https://nipunbatra.github.io`
    - `http://localhost:8000` for local development
-5. Create a browser API key, restrict it to the same website origins, and restrict its API access to **Google Picker API**.
-6. Expand **Site-owner setup** in the Drive dialog, enter the OAuth client ID and API key, then save. These are public browser identifiers—not secrets—and are stored in that browser's local storage.
+5. Expand **Site-owner setup** in the Drive dialog, enter the OAuth client ID, then save. This public browser identifier—not a secret—is stored in that browser's local storage.
 
-For a fixed deployment, place the public values in `BUILTIN_GOOGLE_CONFIG` in [`app.html`](app.html). Never put a client secret, access token, refresh token, `oauth_credentials.json`, or token pickle into this repository. In particular, the desktop credentials from `video-process` cannot be reused by this static web app; they use a different OAuth client type and contain secret/refreshable material.
+For a fixed deployment, place the public client ID in `BUILTIN_GOOGLE_CONFIG` in [`app.html`](app.html). Never put a client secret, access token, refresh token, `oauth_credentials.json`, or token pickle into this repository. In particular, the desktop credentials from `video-process` cannot be reused by this static web app; they use a different OAuth client type and contain secret/refreshable material.
 
-Private Drive playback uses `files.get?alt=media` with the short-lived access token. Since a native `<video>` request cannot attach that OAuth header, the selected file is fully buffered into a temporary browser blob before playback. The same 1 GB guard applies; larger private videos should be downloaded locally first.
+The in-app browser uses read-only `files.list` requests and filters the result to folders and video files. Playback uses `files.get?alt=media` with the short-lived access token. Since a native `<video>` request cannot attach that OAuth header, the selected file is fully buffered into a temporary browser blob before playback. The same 1 GB guard applies; larger private videos should be downloaded locally first.
 
 #### Buffering remote video
 

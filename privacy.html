@@ -32,14 +32,14 @@
   <p class="updated">Last updated: 20 July 2026</p>
   <p class="lede">Video Subtitle Overlay is a static, open-source browser app. It has no application server, account database, analytics, advertising, or telemetry.</p>
 
-  <div class="notice"><b>Google access is limited to files you explicitly choose.</b> The app requests the <code>drive.file</code> scope through Google Identity Services and Google Picker. It does not request Gmail access or permission to list your entire Drive.</div>
+  <div class="notice"><b>Google access is read-only.</b> The app requests the <code>drive.readonly</code> scope through Google Identity Services. It can list Drive file names and folders and download the video you choose, but it cannot upload, edit, share, or delete Drive files and does not request Gmail access.</div>
 
   <h2>Data the app handles</h2>
   <ul>
     <li><b>Local files:</b> videos, subtitles, and metadata you select remain inside your browser tab and are not uploaded by this app.</li>
     <li><b>Public or direct links:</b> your browser connects to YouTube, Google Drive, or the URL host you supplied.</li>
-    <li><b>Private Google Drive files:</b> Google returns the selected file's ID, name, MIME type, size, and content after you authorize and choose that file.</li>
-    <li><b>Deployment configuration:</b> the public OAuth client ID and Google Picker API key may be saved in local storage. No client secret belongs in this app.</li>
+    <li><b>Private Google Drive files:</b> Google returns folder and file names, IDs, MIME types, sizes, and modification times while you browse. The app then downloads the content of the video you choose.</li>
+    <li><b>Deployment configuration:</b> the public OAuth client ID may be saved in local storage. No API key or client secret belongs in this app.</li>
     <li><b>Preferences:</b> overlay sizes, visibility, background style, and positions are saved in local storage.</li>
   </ul>
 
@@ -51,11 +51,11 @@
     <li>The Google access token is held only in JavaScript memory. It is never written to local storage, a cookie, a file, or an application server.</li>
     <li>The access token disappears when the page reloads or closes, expires after Google's short lifetime, and is revoked when you choose <b>Disconnect Google Drive</b>.</li>
     <li>A buffered Drive video remains in memory only until you replace it, disconnect Drive, reload, or close the tab.</li>
-    <li>The public deployment identifiers and UI preferences remain in local storage until you clear this site's browser data.</li>
+    <li>The public OAuth client ID and UI preferences remain in local storage until you clear this site's browser data.</li>
   </ul>
 
   <h2>Disclosure and third parties</h2>
-  <p>This app has no backend to receive your data. Google processes authorization, Picker, and Drive API requests under the <a href="https://policies.google.com/privacy">Google Privacy Policy</a>. YouTube and any direct media host process requests made to their services.</p>
+  <p>This app has no backend to receive your data. Google processes authorization and Drive API requests under the <a href="https://policies.google.com/privacy">Google Privacy Policy</a>. YouTube and any direct media host process requests made to their services.</p>
 
   <h2>Your controls</h2>
   <p>Use <b>Menu → Disconnect Google Drive</b> to revoke the current Google grant and remove any private buffered video from the player. You can also revoke the app from your Google Account's third-party access page, close the tab, or clear this site's browser storage.</p>

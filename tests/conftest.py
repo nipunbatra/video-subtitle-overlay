@@ -95,8 +95,6 @@ def app(page, http_root):
         content_type="application/javascript", body=FAKE_YT))
     page.route("https://accounts.google.com/gsi/client", lambda route: route.fulfill(
         content_type="application/javascript", body=FAKE_GOOGLE))
-    page.route("https://apis.google.com/js/api.js", lambda route: route.fulfill(
-        content_type="application/javascript", body=FAKE_GOOGLE))
     page.goto(f"{http_root}/app.html")
     return page
 

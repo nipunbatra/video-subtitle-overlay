@@ -326,7 +326,7 @@
   }
   .modal-backdrop.hidden,
   .mb-backdrop.hidden { display: none; }
-  .source-modal, .drive-modal,
+  .source-modal, .drive-modal, .drive-browser-modal,
   .mb {
     background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
     width: 540px; max-width: 100%; max-height: 90vh; overflow-y: auto; padding: 18px 20px;
@@ -334,6 +334,7 @@
   }
   .source-modal { width: 570px; }
   .drive-modal { width: 610px; }
+  .drive-browser-modal { width: 720px; padding: 0; overflow: hidden; display: flex; flex-direction: column; }
   .source-modal h2 { margin: 0; font-size: 17px; letter-spacing: -0.01em; }
   .source-modal p, .drive-modal p { color: var(--muted); font-size: 12.5px; line-height: 1.55; margin: 7px 0 14px; }
   .source-modal label[for=sourceUrl] { display: block; color: var(--text); font-weight: 600; font-size: 12px; margin-bottom: 6px; }
@@ -367,6 +368,26 @@
   #driveStatus.error { color: var(--danger); }
   #driveStatus.ready { color: #8ce1b5; }
   .drive-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+  .drive-browser-head { display: flex; align-items: flex-start; gap: 14px; padding: 17px 18px 12px; border-bottom: 1px solid var(--line); }
+  .drive-browser-head h2 { margin: 0; font-size: 18px; }
+  .drive-browser-head p { margin: 4px 0 0; color: var(--muted); font-size: 11.5px; }
+  .drive-browser-head button { margin-left: auto; padding: 5px 9px; }
+  .drive-breadcrumbs { display: flex; align-items: center; gap: 4px; padding: 9px 12px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .drive-breadcrumbs button { flex: 0 0 auto; padding: 5px 7px; border: 0; background: transparent; color: var(--accent-strong); }
+  .drive-breadcrumbs button[aria-current=page] { color: var(--text); font-weight: 650; cursor: default; }
+  .drive-breadcrumbs span { color: #667080; }
+  #driveBrowserStatus { min-height: 34px; padding: 9px 18px; color: var(--muted); font-size: 11.5px; border-bottom: 1px solid var(--line); }
+  #driveBrowserStatus.error { color: var(--danger); }
+  #driveBrowserList { min-height: 260px; max-height: min(56vh, 520px); overflow-y: auto; padding: 6px; }
+  .drive-entry { display: grid; width: 100%; grid-template-columns: 30px minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 10px 11px; border: 0; background: transparent; text-align: left; }
+  .drive-entry:hover, .drive-entry:focus-visible { background: #252b36; }
+  .drive-entry .entry-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; background: #222a37; color: var(--accent-strong); }
+  .drive-entry > span:nth-child(2) { min-width: 0; }
+  .drive-entry .entry-name { display: block; overflow: hidden; color: var(--text); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+  .drive-entry .entry-detail { display: block; color: var(--muted); font-size: 10.5px; font-weight: 400; }
+  .drive-entry .entry-kind { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
+  .drive-entry:disabled { opacity: .5; }
+  .drive-browser-empty { padding: 54px 20px; color: var(--muted); text-align: center; }
   button:disabled { cursor: not-allowed; opacity: .48; transform: none; }
   .mb-head { display: flex; align-items: center; gap: 10px; }
   .mb-head h2 { font-size: 16px; margin: 0; }
@@ -492,7 +513,7 @@
     <h2>Open a video</h2>
     <p><b>Pick folder</b> loads local videos and their matching subtitle or metadata files.</p>
     <p><b>＋ Add link</b> opens YouTube, public Drive, or direct video URLs. For a private Drive file, use <b>Menu → Open from Google Drive</b>.</p>
-    <p class="quiet">Files stay in your browser. Private Drive access is limited to the file you choose—never Gmail or your full Drive.</p>
+    <p class="quiet">Files stay in your browser. Private Drive access is read-only: the app can browse names and folders and download the video you choose, but never Gmail or Drive changes.</p>
 
     <details>
       <summary>File naming and sidecars</summary>
@@ -569,18 +590,15 @@
 <div id="driveModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="driveTitle">
   <section class="drive-modal">
     <h2 id="driveTitle">Open a private Drive video</h2>
-    <p>Connect a Google Account, then choose one video in Google's own file picker. The app never requests Gmail access or permission to list your entire Drive.</p>
-    <div class="drive-scope"><b>Permission requested:</b> view and download only the Drive files you explicitly open with this app (<code>drive.file</code>). The short-lived access token stays in memory and is never written to local storage.</div>
+    <p>Connect a Google Account, browse your Drive folders, and choose a video. The app never requests Gmail access and cannot upload, edit, share, or delete Drive files.</p>
+    <div class="drive-scope"><b>Read-only permission:</b> browse Drive file names and folders, then download the video you choose (<code>drive.readonly</code>). The short-lived access token stays in memory and is never written to local storage.</div>
     <details id="driveSetupDetails" class="drive-setup" open>
       <summary>Site-owner setup</summary>
       <div class="drive-fields">
         <label>OAuth web client ID
           <input id="driveClientId" type="text" autocomplete="off" spellcheck="false" placeholder="123456789-….apps.googleusercontent.com">
         </label>
-        <label>Google Picker API key
-          <input id="driveApiKey" type="text" autocomplete="off" spellcheck="false" placeholder="AIza…">
-        </label>
-        <div class="drive-config-help">Needed once per deployment—not per user. These are public browser identifiers, never a client secret or refresh token. A fixed hosted app should place them in <code>BUILTIN_GOOGLE_CONFIG</code>. See the <a href="https://github.com/nipunbatra/video-subtitle-overlay#private-google-drive-setup" target="_blank" rel="noopener noreferrer">setup instructions</a>.</div>
+        <div class="drive-config-help">Needed once per deployment—not per user. This public browser identifier is never a client secret or refresh token. A fixed hosted app should place it in <code>BUILTIN_GOOGLE_CONFIG</code>. No API key is needed. See the <a href="https://github.com/nipunbatra/video-subtitle-overlay#private-google-drive-setup" target="_blank" rel="noopener noreferrer">setup instructions</a>.</div>
         <div class="drive-save-row"><button id="driveSave" type="button">Save browser configuration</button></div>
       </div>
     </details>
@@ -589,6 +607,21 @@
       <button id="driveCancel" type="button">Cancel</button>
       <button id="driveConnect" class="primary" type="button" disabled>Continue with Google</button>
     </div>
+  </section>
+</div>
+
+<div id="driveBrowserModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="driveBrowserTitle">
+  <section class="drive-browser-modal">
+    <div class="drive-browser-head">
+      <div>
+        <h2 id="driveBrowserTitle">Choose a Drive video</h2>
+        <p>Folders and video files only. Files larger than 1 GB cannot be buffered in this tab.</p>
+      </div>
+      <button id="driveBrowserClose" type="button" aria-label="Close Drive browser">✕</button>
+    </div>
+    <nav id="driveBreadcrumbs" class="drive-breadcrumbs" aria-label="Google Drive folder path"></nav>
+    <div id="driveBrowserStatus" role="status" aria-live="polite"></div>
+    <div id="driveBrowserList" aria-busy="false"></div>
   </section>
 </div>
 
@@ -636,42 +669,54 @@ let activeIdx = -1;
 let curKey = null;
 let curObjUrl = null;
 let showMeta = true, showSubs = true, showClock = true;
-let mbOpen = false, sourceOpen = false, driveModalOpen = false;
+let mbOpen = false, sourceOpen = false, driveModalOpen = false, driveBrowserOpen = false;
 let loadGeneration = 0, remoteController = null, bufferingRemote = false;
 
 const RAW_APP_URL = 'https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html';
-const GOOGLE_CONFIG_KEY = 'vso-google-config-v1';
-const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const GOOGLE_VIDEO_MIMES = 'video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg,video/mpeg,video/x-matroska';
-// Public, origin-restricted browser identifiers shared with video-trim-metadata-store.
-// They are not secrets; never add its client secret, access token, or refresh token here.
+const GOOGLE_CONFIG_KEY = 'vso-google-config-v2';
+const LEGACY_GOOGLE_CONFIG_KEY = 'vso-google-config-v1';
+const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+const GOOGLE_DRIVE_API = 'https://www.googleapis.com/drive/v3';
+const GOOGLE_FOLDER_MIME = 'application/vnd.google-apps.folder';
+// Public, origin-restricted browser client shared with video-trim-metadata-store.
+// It is not a secret; never add its client secret, access token, or refresh token here.
 const BUILTIN_GOOGLE_CONFIG = {
   clientId: '754571415429-dve19qtjfntr104sk8a70tb4rt79mgsc.apps.googleusercontent.com',
-  apiKey: 'AIzaSyDrzxPeI6fgzad5yrsJCaf6vhomX_4kT0Y',
 };
 let googleConfig = loadGoogleConfig();
-let googleLibrariesPromise = null, googleTokenClient = null, googlePickerReady = false;
+let googleLibrariesPromise = null, googleTokenClient = null, googleAuthReady = false;
 let googleAccessToken = null, googleTokenExpiresAt = 0;
 
 const itemKey = it => it.key || (it.dir + '||' + it.name);
 
-function validateGoogleConfig(clientId, apiKey){
-  clientId = (clientId || '').trim(); apiKey = (apiKey || '').trim();
+function validateGoogleConfig(clientId){
+  clientId = (clientId || '').trim();
   const cm = clientId.match(/^([0-9]+)-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/);
   if (!cm) return { valid: false, error: 'Enter a valid OAuth web client ID.' };
-  if (!/^AIza[A-Za-z0-9_-]{30,}$/.test(apiKey)) return { valid: false, error: 'Enter a valid browser API key.' };
-  return { valid: true, clientId, apiKey, appId: cm[1] };
+  return { valid: true, clientId };
 }
 function loadGoogleConfig(){
   let stored = null;
-  try { stored = JSON.parse(localStorage.getItem(GOOGLE_CONFIG_KEY) || 'null'); } catch(e){}
+  try {
+    stored = JSON.parse(localStorage.getItem(GOOGLE_CONFIG_KEY) || 'null');
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_GOOGLE_CONFIG_KEY) || 'null');
+    // Keep only the public client ID, then purge the retired Picker object
+    // because it may contain the exposed API key.
+    if (!stored && legacy && typeof legacy.clientId === 'string'){
+      stored = { clientId: legacy.clientId };
+      localStorage.setItem(GOOGLE_CONFIG_KEY, JSON.stringify(stored));
+    }
+    localStorage.removeItem(LEGACY_GOOGLE_CONFIG_KEY);
+  } catch(e){
+    try { localStorage.removeItem(LEGACY_GOOGLE_CONFIG_KEY); } catch(_e){}
+  }
   const candidate = stored || BUILTIN_GOOGLE_CONFIG;
-  const checked = validateGoogleConfig(candidate.clientId, candidate.apiKey);
-  return checked.valid ? checked : { clientId: candidate.clientId || '', apiKey: candidate.apiKey || '', appId: '' };
+  const checked = validateGoogleConfig(candidate.clientId);
+  return checked.valid ? checked : { clientId: candidate.clientId || '' };
 }
 function persistGoogleConfig(config){
   googleConfig = config;
-  try { localStorage.setItem(GOOGLE_CONFIG_KEY, JSON.stringify({ clientId: config.clientId, apiKey: config.apiKey })); } catch(e){}
+  try { localStorage.setItem(GOOGLE_CONFIG_KEY, JSON.stringify({ clientId: config.clientId })); } catch(e){}
 }
 function hasGoogleToken(){ return !!googleAccessToken && Date.now() < googleTokenExpiresAt; }
 
@@ -1331,8 +1376,10 @@ $('libraryToggle').onclick = () => setLibraryOpen(!document.body.classList.conta
 
 /* ---------- app menu, raw download & private Google Drive ---------- */
 const appMenu = $('appMenu'), menuToggle = $('menuToggle');
-const driveModal = $('driveModal'), driveClientId = $('driveClientId'), driveApiKey = $('driveApiKey');
+const driveModal = $('driveModal'), driveClientId = $('driveClientId');
 const driveStatus = $('driveStatus'), driveConnect = $('driveConnect'), driveSetupDetails = $('driveSetupDetails');
+const driveBrowserModal = $('driveBrowserModal'), driveBrowserList = $('driveBrowserList');
+const driveBreadcrumbs = $('driveBreadcrumbs'), driveBrowserStatus = $('driveBrowserStatus');
 let menuOpen = false, driveLastFocus = null;
 
 function positionAppMenu(){
@@ -1373,7 +1420,7 @@ $('menuPresent').onclick = () => { setMenuOpen(false); $('presentBtn').click(); 
 
 function updateDriveMenu(){
   const status = $('driveMenuStatus');
-  const configured = validateGoogleConfig(googleConfig.clientId, googleConfig.apiKey).valid;
+  const configured = validateGoogleConfig(googleConfig.clientId).valid;
   if (hasGoogleToken()){
     status.textContent = 'Google Drive connected for this tab.'; status.className = 'menu-status connected';
   } else if (configured){
@@ -1402,17 +1449,16 @@ async function openDriveModal(){
   setMenuOpen(false);
   driveLastFocus = document.activeElement;
   driveClientId.value = googleConfig.clientId || '';
-  driveApiKey.value = googleConfig.apiKey || '';
   driveConnect.disabled = true;
   driveModal.classList.remove('hidden'); driveModalOpen = true;
-  const checked = validateGoogleConfig(driveClientId.value, driveApiKey.value);
+  const checked = validateGoogleConfig(driveClientId.value);
   driveSetupDetails.open = !checked.valid;
   if (location.protocol === 'file:'){
     setDriveStatus('Google authorization requires an http(s) origin. Serve this file locally or use the hosted app.', 'error');
     driveClientId.focus(); return;
   }
   if (!checked.valid){ setDriveStatus('Enter the deployment credentials once, then save them.'); driveClientId.focus(); return; }
-  setDriveStatus('Loading Google Identity Services and the Drive Picker…');
+  setDriveStatus('Loading Google Identity Services…');
   try {
     await prepareGoogleLibraries();
     if (!driveModalOpen) return;
@@ -1425,7 +1471,7 @@ async function openDriveModal(){
   }
 }
 $('driveOpen').onclick = () => {
-  if (hasGoogleToken() && googlePickerReady){ setMenuOpen(false); showGooglePicker(); }
+  if (hasGoogleToken() && googleAuthReady){ setMenuOpen(false); showGoogleDriveBrowser(); }
   else openDriveModal();
 };
 $('driveCancel').onclick = closeDriveModal;
@@ -1443,20 +1489,14 @@ function loadExternalScript(src, ready){
   });
 }
 async function prepareGoogleLibraries(){
-  const checked = validateGoogleConfig(googleConfig.clientId, googleConfig.apiKey);
+  const checked = validateGoogleConfig(googleConfig.clientId);
   if (!checked.valid) throw new Error(checked.error);
   if (!googleLibrariesPromise){
-    googleLibrariesPromise = (async () => {
-      await Promise.all([
-        loadExternalScript('https://accounts.google.com/gsi/client', () => !!(window.google && google.accounts && google.accounts.oauth2)),
-        loadExternalScript('https://apis.google.com/js/api.js', () => !!window.gapi),
-      ]);
-      await new Promise((resolve, reject) => gapi.load('picker', {
-        callback: resolve, onerror: () => reject(new Error('picker load failed')),
-        timeout: 15000, ontimeout: () => reject(new Error('picker timeout')),
-      }));
-      googlePickerReady = true;
-    })().catch(e => { googleLibrariesPromise = null; googlePickerReady = false; throw e; });
+    googleLibrariesPromise = loadExternalScript(
+      'https://accounts.google.com/gsi/client',
+      () => !!(window.google && google.accounts && google.accounts.oauth2),
+    ).then(() => { googleAuthReady = true; })
+      .catch(e => { googleLibrariesPromise = null; googleAuthReady = false; throw e; });
   }
   await googleLibrariesPromise;
   googleTokenClient = google.accounts.oauth2.initTokenClient({
@@ -1469,9 +1509,9 @@ async function prepareGoogleLibraries(){
   });
 }
 $('driveSave').onclick = async () => {
-  const checked = validateGoogleConfig(driveClientId.value, driveApiKey.value);
+  const checked = validateGoogleConfig(driveClientId.value);
   if (!checked.valid){ setDriveStatus(checked.error, 'error'); return; }
-  const changed = checked.clientId !== googleConfig.clientId || checked.apiKey !== googleConfig.apiKey;
+  const changed = checked.clientId !== googleConfig.clientId;
   if (changed) clearGoogleAuthorization(false);
   persistGoogleConfig(checked);
   googleTokenClient = null;
@@ -1486,49 +1526,146 @@ $('driveSave').onclick = async () => {
   } catch(e){ setDriveStatus('Could not load Google authorization. Check the connection and try again.', 'error'); }
 };
 $('driveConnect').onclick = () => {
-  if (hasGoogleToken()){ closeDriveModal(); showGooglePicker(); return; }
+  if (hasGoogleToken()){ closeDriveModal(); showGoogleDriveBrowser(); return; }
   if (!googleTokenClient){ setDriveStatus('Google authorization is not ready. Save the configuration and retry.', 'error'); return; }
   setDriveStatus('Waiting for Google Account selection…');
-  googleTokenClient.requestAccessToken({ prompt: 'consent select_account' });
+  googleTokenClient.requestAccessToken({ prompt: 'select_account' });
 };
 function handleGoogleToken(response){
   if (!response || response.error || !response.access_token){
     setDriveStatus('Google did not grant Drive access.', 'error'); return;
   }
   if (google.accounts.oauth2.hasGrantedAllScopes && !google.accounts.oauth2.hasGrantedAllScopes(response, GOOGLE_DRIVE_SCOPE)){
-    setDriveStatus('The selected-file Drive permission was not granted.', 'error'); return;
+    setDriveStatus('The read-only Drive permission was not granted.', 'error'); return;
   }
   googleAccessToken = response.access_token;
   googleTokenExpiresAt = Date.now() + Math.max(60, Number(response.expires_in) || 3600) * 1000 - 60000;
-  updateDriveMenu(); closeDriveModal(); showGooglePicker();
+  updateDriveMenu(); closeDriveModal(); showGoogleDriveBrowser();
 }
-function showGooglePicker(){
-  if (!hasGoogleToken() || !googlePickerReady){ openDriveModal(); return; }
+
+let driveBrowseGeneration = 0;
+
+function driveBrowserTrapFocus(e){
+  const f = [...driveBrowserModal.querySelectorAll('button')].filter(el => !el.disabled && el.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+}
+function closeDriveBrowser(){
+  ++driveBrowseGeneration;
+  driveBrowserModal.classList.add('hidden'); driveBrowserOpen = false;
+  driveBrowserList.setAttribute('aria-busy', 'false');
+  if (driveLastFocus && driveLastFocus.focus) driveLastFocus.focus();
+}
+function setDriveBrowserStatus(message, kind=''){
+  driveBrowserStatus.textContent = message;
+  driveBrowserStatus.className = kind;
+}
+function renderDriveBreadcrumbs(crumbs){
+  driveBreadcrumbs.replaceChildren();
+  crumbs.forEach((crumb, i) => {
+    if (i){ const sep = document.createElement('span'); sep.textContent = '›'; driveBreadcrumbs.appendChild(sep); }
+    const button = document.createElement('button');
+    button.type = 'button'; button.textContent = crumb.name;
+    if (i === crumbs.length - 1) button.setAttribute('aria-current', 'page');
+    else button.onclick = () => browseDriveFolder(crumb.id, crumbs.slice(0, i + 1));
+    driveBreadcrumbs.appendChild(button);
+  });
+}
+function driveItemButton(file, crumbs){
+  const button = document.createElement('button');
+  button.type = 'button'; button.className = 'drive-entry';
+  const icon = document.createElement('span'); icon.className = 'entry-icon';
+  icon.textContent = file.isFolder ? '▰' : '▶'; icon.setAttribute('aria-hidden', 'true');
+  const info = document.createElement('span');
+  const name = document.createElement('span'); name.className = 'entry-name'; name.textContent = file.name;
+  const detail = document.createElement('span'); detail.className = 'entry-detail';
+  detail.textContent = file.isFolder ? 'Folder' : (file.size ? formatBytes(file.size) : 'Video');
+  info.append(name, detail);
+  const kind = document.createElement('span'); kind.className = 'entry-kind';
+  if (file.isFolder){
+    kind.textContent = 'Open ›';
+    button.onclick = () => browseDriveFolder(file.id, [...crumbs, { id: file.id, name: file.name }]);
+  } else if (file.size > MAX_BUFFER_BYTES){
+    kind.textContent = 'Over 1 GB'; button.disabled = true;
+    button.title = 'Download this video locally first; it is too large for the browser buffer.';
+  } else {
+    kind.textContent = 'Choose';
+    button.onclick = () => {
+      const result = addAuthenticatedDriveFile(file);
+      if (result.ok) closeDriveBrowser(); else setDriveBrowserStatus(result.error, 'error');
+    };
+  }
+  button.append(icon, info, kind);
+  return button;
+}
+async function browseDriveFolder(folderId, crumbs){
+  if (!hasGoogleToken()){ closeDriveBrowser(); openDriveModal(); return; }
+  const generation = ++driveBrowseGeneration;
+  renderDriveBreadcrumbs(crumbs);
+  driveBrowserList.replaceChildren(); driveBrowserList.setAttribute('aria-busy', 'true');
+  setDriveBrowserStatus('Loading this folder…');
   try {
-    const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setIncludeFolders(false).setSelectFolderEnabled(false)
-      .setMimeTypes(GOOGLE_VIDEO_MIMES).setMode(google.picker.DocsViewMode.LIST);
-    let builder = new google.picker.PickerBuilder()
-      .addView(view).setOAuthToken(googleAccessToken)
-      .setDeveloperKey(googleConfig.apiKey).setAppId(googleConfig.appId)
-      .setCallback(handlePickerResult);
-    if (location.origin && location.origin !== 'null') builder = builder.setOrigin(location.origin);
-    builder.build().setVisible(true);
+    const files = [];
+    let pageToken = '';
+    do {
+      const params = new URLSearchParams({
+        q: `'${folderId.replace(/'/g, "\\'")}' in parents and trashed=false`,
+        fields: 'nextPageToken,files(id,name,mimeType,size,modifiedTime)',
+        orderBy: 'folder,name', pageSize: '1000', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true',
+      });
+      if (pageToken) params.set('pageToken', pageToken);
+      const response = await fetch(GOOGLE_DRIVE_API + '/files?' + params, {
+        headers: { Authorization: 'Bearer ' + googleAccessToken },
+      });
+      if (response.status === 401 || response.status === 403){
+        googleAccessToken = null; googleTokenExpiresAt = 0; updateDriveMenu(); closeDriveBrowser();
+        setLoadStatus('Google Drive access expired or was denied. Open the menu and reconnect.', null, 'error');
+        return;
+      }
+      if (!response.ok) throw new Error('Google Drive returned HTTP ' + response.status);
+      const data = await response.json();
+      for (const f of data.files || []){
+        const isFolder = f.mimeType === GOOGLE_FOLDER_MIME;
+        if (!isFolder && !(f.mimeType || '').startsWith('video/')) continue;
+        files.push({ id: f.id, name: (f.name || f.id).slice(0, 200), mimeType: f.mimeType,
+          size: Number(f.size) || 0, sizeBytes: Number(f.size) || 0, modifiedTime: f.modifiedTime || '', isFolder });
+      }
+      pageToken = data.nextPageToken || '';
+      if (files.length > 10000) throw new Error('This folder has too many entries to display safely.');
+    } while (pageToken);
+    if (generation !== driveBrowseGeneration) return;
+    files.sort((a,b) => Number(b.isFolder) - Number(a.isFolder) || a.name.localeCompare(b.name));
+    if (!files.length){
+      const empty = document.createElement('div'); empty.className = 'drive-browser-empty';
+      empty.textContent = 'No folders or video files in this folder.'; driveBrowserList.appendChild(empty);
+    } else files.forEach(file => driveBrowserList.appendChild(driveItemButton(file, crumbs)));
+    const folders = files.filter(f => f.isFolder).length;
+    const videos = files.length - folders;
+    setDriveBrowserStatus(`${folders} folder${folders === 1 ? '' : 's'} · ${videos} video${videos === 1 ? '' : 's'}`);
   } catch(e){
-    console.warn('Google Picker failed', e);
-    setLoadStatus('Could not open the Google Drive Picker. Check the deployment configuration.', null, 'error');
+    if (generation !== driveBrowseGeneration) return;
+    setDriveBrowserStatus('Could not list this folder: ' + e.message, 'error');
+    const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Retry';
+    retry.onclick = () => browseDriveFolder(folderId, crumbs); driveBrowserList.appendChild(retry);
+  } finally {
+    if (generation === driveBrowseGeneration) driveBrowserList.setAttribute('aria-busy', 'false');
   }
 }
-function handlePickerResult(data){
-  if (!data || data.action !== google.picker.Action.PICKED) return;
-  const doc = data.docs && data.docs[0];
-  const result = addAuthenticatedDriveFile(doc);
-  if (!result.ok) setLoadStatus(result.error, null, 'error');
+function showGoogleDriveBrowser(){
+  if (!hasGoogleToken() || !googleAuthReady){ openDriveModal(); return; }
+  driveBrowserModal.classList.remove('hidden'); driveBrowserOpen = true;
+  browseDriveFolder('root', [{ id: 'root', name: 'My Drive' }]);
+  $('driveBrowserClose').focus();
 }
+$('driveBrowserClose').onclick = closeDriveBrowser;
+driveBrowserModal.addEventListener('click', e => { if (e.target === driveBrowserModal) closeDriveBrowser(); });
+
 function addAuthenticatedDriveFile(doc){
   if (!doc || !doc.id) return { ok: false, error: 'Google Drive did not return a file.' };
   if (!(doc.mimeType || '').startsWith('video/')) return { ok: false, error: 'Choose a video file from Google Drive.' };
-  const size = Number(doc.sizeBytes) || 0;
+  const size = Number(doc.sizeBytes || doc.size) || 0;
   if (size > MAX_BUFFER_BYTES) return { ok: false, error: 'This Drive video is larger than the 1 GB in-memory playback limit.' };
   const filename = (doc.name || doc.id).slice(0, 160);
   const name = baseSplit(filename).base || doc.id;
@@ -1549,6 +1686,7 @@ function addAuthenticatedDriveFile(doc){
 function clearGoogleAuthorization(revoke=true){
   const token = googleAccessToken;
   googleAccessToken = null; googleTokenExpiresAt = 0;
+  if (driveBrowserOpen) closeDriveBrowser();
   if (revoke && token && window.google && google.accounts && google.accounts.oauth2){
     try { google.accounts.oauth2.revoke(token, () => {}); } catch(e){}
   }
@@ -1799,6 +1937,11 @@ function togglePlay(){
 }
 
 document.addEventListener('keydown', e => {
+  if (driveBrowserOpen){
+    if (e.key === 'Escape') closeDriveBrowser();
+    else if (e.key === 'Tab') driveBrowserTrapFocus(e);
+    return;
+  }
   if (driveModalOpen){
     if (e.key === 'Escape') closeDriveModal();
     else if (e.key === 'Tab') driveTrapFocus(e);

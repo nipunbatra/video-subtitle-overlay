@@ -224,7 +224,7 @@
     <p class="sub">Everything renders inside the browser tab — nothing extra to install.</p>
     <div class="grid">
       <div class="card"><h3>Auto-matched files</h3><p>Pick a folder; each video finds its same-named <code>.vtt</code>/<code>.srt</code> subtitles and <code>.json</code>/<code>.txt</code> metadata automatically.</p></div>
-      <div class="card"><h3>Local, Drive, or web</h3><p>Play local files, YouTube links, public Drive URLs, private videos chosen through Google's Picker, and direct HTTP(S) media.</p></div>
+      <div class="card"><h3>Local, Drive, or web</h3><p>Play local files, YouTube links, public Drive URLs, private videos chosen through a read-only Drive browser, and direct HTTP(S) media.</p></div>
       <div class="card"><h3>Remote buffering</h3><p>Stream normally or buffer a complete remote file in memory before playback, with progress and safe fallback.</p></div>
       <div class="card"><h3>Constant metadata</h3><p>A persistent overlay (title, date, anything) stays on screen for the whole clip — perfect for context during a lecture or talk.</p></div>
       <div class="card"><h3>Synced subtitles</h3><p>Custom WebVTT renderer styled for readability on a shared screen. Resize and reposition on the fly.</p></div>
@@ -258,7 +258,7 @@
       <li>Share the <b>Chrome Tab</b> in Meet/Zoom and tick <b>“Also share tab audio.”</b></li>
     </ol>
     <div class="note">Playback uses the browser's codecs — <b>MP4 (H.264)</b> and <b>WebM</b> are the safe bets. <code>.mkv</code>/<code>.avi</code> may not decode in Chrome.</div>
-    <div class="note"><b>Linked video:</b> click <b>＋ Add link</b> for YouTube, a public Google Drive video file, or a direct HTTP(S) media URL. For a private Drive video, use <b>Menu → Open from Google Drive</b>; the official Picker grants access only to the file you choose. Remote links stream with browser preloading, while private Drive files and the optional safety mode use a bounded in-memory buffer. Same-named subtitle and metadata sidecars still attach.</div>
+    <div class="note"><b>Linked video:</b> click <b>＋ Add link</b> for YouTube, a public Google Drive video file, or a direct HTTP(S) media URL. For a private Drive video, use <b>Menu → Open from Google Drive</b>; the app requests read-only Drive access, filters the browser to folders and videos, and cannot change files. Remote links stream with browser preloading, while private Drive files and the optional safety mode use a bounded in-memory buffer. Same-named subtitle and metadata sidecars still attach.</div>
   </div>
 </section>
 

@@ -87,18 +87,14 @@ def test_format_bytes(app, size, expected):
 
 
 def test_google_browser_config_validation(app):
-    valid = app.evaluate("([c,k]) => validateGoogleConfig(c,k)", [
-        "123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
-        "AIza" + "A" * 35,
-    ])
+    valid = app.evaluate("c => validateGoogleConfig(c)",
+                         "123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com")
     assert valid == {
         "valid": True,
         "clientId": "123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
-        "apiKey": "AIza" + "A" * 35,
-        "appId": "123456789012",
     }
-    assert app.evaluate("() => validateGoogleConfig('bad', 'bad').valid") is False
-    assert "OAuth web client" in app.evaluate("() => validateGoogleConfig('bad', 'bad').error")
+    assert app.evaluate("() => validateGoogleConfig('bad').valid") is False
+    assert "OAuth web client" in app.evaluate("() => validateGoogleConfig('bad').error")
 
 
 def test_parse_vtt_basic(app):
