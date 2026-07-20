@@ -55,6 +55,29 @@ def test_full_buffer_fetches_to_blob_before_playback(app):
     assert app.evaluate("video.preload") == "auto"
 
 
+def test_public_drive_link_can_fully_buffer_before_playback(app):
+    """The Drive URL conversion path must still use the guarded fetch buffer."""
+    resource_types = []
+
+    def route_drive(route, request):
+        resource_types.append(request.resource_type)
+        fulfill_demo(route)
+
+    app.route(DRIVE_MEDIA, route_drive)
+    add_link(app, DRIVE_LINK, buffer=True)
+
+    app.wait_for_function(
+        "items.length === 1 && items[0].type === 'gdrive' && items[0].buffer"
+    )
+    app.wait_for_function("curObjUrl && curObjUrl.startsWith('blob:')", timeout=10_000)
+    app.wait_for_function("video.currentTime > 0.2", timeout=10_000)
+
+    assert "fetch" in resource_types
+    assert app.evaluate("items[0].driveId") == DRIVE_ID
+    assert app.evaluate("video.currentSrc.startsWith('blob:')")
+    assert app.locator("#list .tag.buffer").text_content() == "full buffer"
+
+
 def test_blocked_full_buffer_falls_back_to_streaming(app):
     resource_types = []
 

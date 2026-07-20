@@ -8,18 +8,26 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23171a20'/%3E%3Cpath d='M13 23h38v28H13z' fill='%236e9eea'/%3E%3Cpath d='m13 23 7-10h10l-7 10m10 0 7-10h11l-7 10' fill='none' stroke='%23edf0f5' stroke-width='5'/%3E%3Cpath d='m28 31 13 7-13 7z' fill='%2307101d'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #0e0f13; --panel: #171a21; --line: #262b36;
-    --accent: #4f8cff; --text: #e7eaf0; --muted: #8b93a3;
+    --bg: #0d1016; --panel: #151a23; --panel-raised: #1a202b; --line: #293142;
+    --accent: #77a7ff; --accent-strong: #4f8cff; --text: #f2f5fa; --muted: #a2abba;
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font: 16px/1.6 "Avenir Next", "Segoe UI Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
-  .wrap { max-width: 920px; margin: 0 auto; padding: 0 22px; }
+  button { font: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+  .skip-link {
+    position: fixed; left: 16px; top: 12px; z-index: 100; transform: translateY(-150%);
+    background: var(--text); color: var(--bg); border-radius: 8px; padding: 8px 12px; font-weight: 650;
+  }
+  .skip-link:focus { transform: translateY(0); }
 
   header {
     border-bottom: 1px solid var(--line);
@@ -27,26 +35,28 @@
     backdrop-filter: blur(8px); z-index: 10;
   }
   header .wrap { display: flex; align-items: center; gap: 14px; height: 60px; }
-  header .brand { font-weight: 700; }
+  header .brand { font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
   header nav { margin-left: auto; display: flex; gap: 18px; align-items: center; font-size: 14px; }
   .btn {
-    display: inline-block; background: var(--accent); color: #fff;
+    display: inline-block; background: var(--accent-strong); color: #fff;
     padding: 9px 16px; border-radius: 8px; font-weight: 600; font-size: 14px;
+    transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
   }
   .btn.ghost { background: #222733; border: 1px solid var(--line); color: var(--text); }
-  .btn:hover { text-decoration: none; opacity: 0.92; }
+  .btn:hover { text-decoration: none; background: #6599ff; transform: translateY(-1px); }
+  .btn.ghost:hover { background: #2b3342; }
 
   .hero { padding: 70px 0 50px; text-align: center; }
-  .hero h1 { font-size: 42px; line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.5px; }
+  .hero h1 { font-size: clamp(34px, 6vw, 48px); line-height: 1.08; margin: 0 0 16px; letter-spacing: -1.2px; text-wrap: balance; }
   .hero p.lead { font-size: 19px; color: var(--muted); max-width: 640px; margin: 0 auto 28px; }
   .hero .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
   section { padding: 46px 0; border-top: 1px solid var(--line); }
-  section h2 { font-size: 26px; margin: 0 0 8px; }
+  section h2 { font-size: 28px; line-height: 1.2; letter-spacing: -0.5px; margin: 0 0 8px; text-wrap: balance; }
   section .sub { color: var(--muted); margin: 0 0 26px; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: 16px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+  .card { background: linear-gradient(145deg, var(--panel-raised), var(--panel)); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
   .card h3 { margin: 0 0 6px; font-size: 17px; }
   .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
 
@@ -65,6 +75,8 @@
     border-radius: 5px; padding: 1px 7px; font: 12px/1.5 ui-monospace, Menlo, monospace; min-width: 16px; text-align: center;
   }
   .note { background: #16202e; border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: 0 8px 8px 0; color: #cdd6e6; font-size: 14.5px; }
+  .note + .note { margin-top: 12px; }
+  .next-step { margin-top: 18px; }
 
   /* Demo video */
   .demo-frame {
@@ -151,9 +163,29 @@
   .demo-note { color: var(--muted); font-size: 14px; text-align: center; margin: 18px auto 0; max-width: 640px; }
 
   footer { border-top: 1px solid var(--line); padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align: center; }
+
+  @media (max-width: 720px) {
+    .wrap { padding-inline: 18px; }
+    header .wrap { height: 56px; }
+    header nav { gap: 12px; }
+    header nav > a:not(.btn):not([href*="framecut"]) { display: none; }
+    .hero { padding: 54px 0 40px; }
+    .hero p.lead { font-size: 17px; }
+    section { padding: 38px 0; }
+    .grid { grid-template-columns: 1fr; }
+    .demo-frame .demo-meta { max-width: 70%; }
+    th, td { padding-inline: 8px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+  }
 </style>
 </head>
 <body>
+
+<a class="skip-link" href="#main">Skip to content</a>
 
 <header>
   <div class="wrap">
@@ -161,21 +193,19 @@
     <nav>
       <a href="#demo">Demo</a>
       <a href="#how">How it works</a>
-      <a href="#run">Download</a>
       <a href="https://nipunbatra.github.io/framecut/">FrameCut</a>
       <a href="https://github.com/nipunbatra/framecue">GitHub</a>
-      <a class="btn" href="app.html">Launch app →</a>
+      <a class="btn" href="app.html">Launch app</a>
     </nav>
   </div>
 </header>
 
+<main id="main">
 <div class="wrap">
   <div class="hero">
-    <h1>Keep every cue<br>inside the video frame</h1>
+    <h1>Video context that survives screen sharing</h1>
     <p class="lead">
-      FrameCue is a single, self-contained HTML file. Pick a folder, and each video auto-loads its matching
-      subtitles and metadata — all drawn into the page, so they show up when you share a Chrome tab
-      over Google Meet, Zoom, or any screen share.
+      Play local, YouTube, Drive, or linked video with subtitles, metadata, and timecode drawn directly in the tab—clean, readable, and responsive at any screen size.
     </p>
     <div class="cta">
       <a class="btn" href="app.html">Launch the app</a>
@@ -185,7 +215,7 @@
   </div><!-- /hero -->
 
   <div class="demo" id="demo">
-    <p class="demo-cap">A ~37-second explainer, narrated by <b>Gemini</b>. <span class="demo-hint">Switch the clip (a <b>light</b> one makes the subtitle background obvious), toggle overlays, and cycle <b>BG</b> — exactly what the app draws into the page:</span></p>
+    <p class="demo-cap">Try the overlays on a 37-second explainer. Switch the background, move a cue, or scale everything before opening the app.</p>
     <div class="demo-switch">
       <span class="ds-label">Demo clip:</span>
       <button class="tg on" data-vid="demo/demo-lecture.mp4" data-poster="demo/poster.jpg">Animation · dark</button>
@@ -212,10 +242,10 @@
       <div class="demo-subs" id="demoSubs"></div>
     </div>
     <div class="demo-lightpreview">
-      <div class="lp-cap">On this dark clip the box is barely visible — here's the same subtitle on a <b>light slide</b>, where it shows most. Cycle <b>BG</b> above to compare.</div>
+      <div class="lp-cap">Light-background preview—cycle <b>BG</b> above to compare readability.</div>
       <div class="lp-stage"><div class="lp-subs" id="lpSubs"><span>Then the fitted line predicts y for a new x.</span></div></div>
     </div>
-    <p class="demo-note">Muted for autoplay — <b>unmute in the player</b> for the Gemini narration. The clip and its sibling <code>.vtt</code> + <code>.json</code> live in the repo's <a href="https://github.com/nipunbatra/framecue/tree/main/demo">demo/</a> folder; <a href="app.html">open the app</a> and load them to try every control.</p>
+    <p class="demo-note">Muted for autoplay—unmute for narration. The video and matching <code>.vtt</code> + <code>.json</code> are in <a href="https://github.com/nipunbatra/framecue/tree/main/demo">demo/</a>.</p>
   </div>
 </div><!-- /wrap -->
 
@@ -224,14 +254,10 @@
     <h2>What it does</h2>
     <p class="sub">Everything renders inside the browser tab — nothing extra to install.</p>
     <div class="grid">
-      <div class="card"><h3>Auto-matched files</h3><p>Pick a folder; each video finds its same-named <code>.vtt</code>/<code>.srt</code> subtitles and <code>.json</code>/<code>.txt</code> metadata automatically.</p></div>
-      <div class="card"><h3>Local, Drive, or web</h3><p>Play local files, YouTube links, public Drive URLs, private videos chosen through a read-only Drive browser, and direct HTTP(S) media.</p></div>
-      <div class="card"><h3>Remote buffering</h3><p>Stream normally or buffer a complete remote file in memory before playback, with progress and safe fallback.</p></div>
-      <div class="card"><h3>Constant metadata</h3><p>A persistent overlay (title, date, anything) stays on screen for the whole clip — perfect for context during a lecture or talk.</p></div>
-      <div class="card"><h3>Synced subtitles</h3><p>Custom WebVTT renderer styled for readability on a shared screen. Resize and reposition on the fly.</p></div>
-      <div class="card"><h3>Responsive overlays</h3><p>Timecode, metadata, and subtitles adapt to the video area while keeping manual size and position controls.</p></div>
-      <div class="card"><h3>Presentation mode</h3><p>One key hides all the chrome so the video fills the tab — clean to share.</p></div>
-      <div class="card"><h3>Local-file privacy</h3><p>Files you select stay inside your browser. Linked videos connect directly to the source host you chose.</p></div>
+      <div class="card"><h3>Bring any video</h3><p>Use local files, YouTube, public Drive links, private videos from the read-only Drive browser, or direct HTTP(S) media.</p></div>
+      <div class="card"><h3>Attach the context</h3><p>Same-named <code>.vtt</code>/<code>.srt</code> subtitles and <code>.json</code>/<code>.txt</code> metadata match automatically.</p></div>
+      <div class="card"><h3>Keep playback resilient</h3><p>Stream normally or fully buffer remote video with progress, size limits, completeness checks, cancellation, and safe fallback.</p></div>
+      <div class="card"><h3>Present clearly</h3><p>Responsive overlays adapt to the video area, remain movable and scalable, and stay visible in presentation mode.</p></div>
     </div>
   </div>
 </section>
@@ -252,7 +278,7 @@
 }</pre>
     <p>A plain <code>talk.txt</code> is shown as-is.</p>
     <div class="note">Don't want to hand-write JSON? The app has a built-in <b>✎ New metadata</b> button — type fields, see a live preview, and download a ready-to-use <code>.json</code> (or apply it to the current video instantly).</div>
-    <p style="margin-top:18px">Then:</p>
+    <p class="next-step">Then:</p>
     <ol class="steps">
       <li>Open the app and click <b>Pick folder</b> (or drag a folder onto the page).</li>
       <li>Click a video in the sidebar — subtitles and metadata load automatically.</li>
@@ -308,6 +334,8 @@ iwr https://raw.githubusercontent.com/nipunbatra/framecue/main/app.html -OutFile
   </div>
 </section>
 
+</main>
+
 <footer>
   <div class="wrap">
     Open source under the MIT License ·
@@ -341,8 +369,16 @@ iwr https://raw.githubusercontent.com/nipunbatra/framecue/main/app.html -OutFile
         el.style.left = (l / sr.width * 100) + '%'; el.style.top = (t / sr.height * 100) + '%';
         el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.transform = 'none';
       }
-      function up(){ el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); }
-      el.addEventListener('pointermove', move); el.addEventListener('pointerup', up);
+      function up(){
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('pointercancel', up);
+        el.removeEventListener('lostpointercapture', up);
+      }
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+      el.addEventListener('lostpointercapture', up);
     });
     el.addEventListener('dblclick', function(){ if (!demoMoving) return; el.style.left=''; el.style.top=''; el.style.right=''; el.style.bottom=''; el.style.transform=''; });
   });
