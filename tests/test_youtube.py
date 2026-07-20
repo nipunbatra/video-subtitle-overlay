@@ -9,8 +9,9 @@ VTT = b"WEBVTT\n\n00:00.000 --> 59:59.000\nHi from VTT\n"
 
 
 def add_yt(app, url_or_id):
-    app.once("dialog", lambda d: d.accept(url_or_id))
     app.click("#ytAdd")
+    app.fill("#sourceUrl", url_or_id)
+    app.click("#sourceSubmit")
 
 
 def test_full_flow_link_overlays_metadata_sidecar(app):
@@ -138,32 +139,28 @@ def test_drop_plain_text_is_ignored(app):
     assert app.evaluate("items.length") == 0
 
 
-def test_invalid_link_shows_alert(app):
-    dialogs = []
-
-    def on_dialog(d):
-        dialogs.append((d.type, d.message))
-        d.accept("https://example.com/watch?v=notyoutube0") if d.type == "prompt" else d.accept()
-
-    app.on("dialog", on_dialog)
+def test_invalid_link_shows_inline_error(app):
     app.click("#ytAdd")
-    app.wait_for_timeout(300)
-    assert ("prompt" in dict(dialogs) or dialogs[0][0] == "prompt")
-    assert any(t == "alert" and "Could not find a YouTube video ID" in m for t, m in dialogs)
+    app.fill("#sourceUrl", "not a video link")
+    app.click("#sourceSubmit")
+    assert "valid YouTube" in app.text_content("#sourceError")
+    assert not app.locator("#sourceModal").evaluate("el => el.classList.contains('hidden')")
     assert app.evaluate("items.length") == 0
 
 
-def test_cancelled_prompt_does_nothing(app):
-    app.once("dialog", lambda d: d.dismiss())
+def test_cancelled_link_dialog_does_nothing(app):
     app.click("#ytAdd")
-    app.wait_for_timeout(200)
+    app.fill("#sourceUrl", FAKE_ID)
+    app.click("#sourceCancel")
+    assert app.locator("#sourceModal").evaluate("el => el.classList.contains('hidden')")
     assert app.evaluate("items.length") == 0
 
 
 def test_file_protocol_shows_guidance(page):
     page.goto((REPO / "app.html").as_uri())
-    page.once("dialog", lambda d: d.accept(f"https://youtu.be/{FAKE_ID}"))
     page.click("#ytAdd")
+    page.fill("#sourceUrl", f"https://youtu.be/{FAKE_ID}")
+    page.click("#sourceSubmit")
     page.wait_for_function(
         "!placeholder.classList.contains('hidden') && placeholder.textContent.includes('hosted app')")
 
@@ -172,8 +169,9 @@ def test_api_load_failure_then_retry(page, http_root):
     from conftest import FAKE_YT
     page.route("**/iframe_api", lambda route: route.abort())
     page.goto(f"{http_root}/app.html")
-    page.once("dialog", lambda d: d.accept(FAKE_ID))
     page.click("#ytAdd")
+    page.fill("#sourceUrl", FAKE_ID)
+    page.click("#sourceSubmit")
     page.wait_for_function("placeholder.textContent.includes('internet')")
 
     # network is back: clicking the item again must retry from scratch

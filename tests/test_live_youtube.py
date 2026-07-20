@@ -18,9 +18,10 @@ def test_real_youtube_embed_plays(playwright, http_root):
         args=BROWSER_ARGS + ["--disable-blink-features=AutomationControlled"])
     try:
         page = browser.new_page()
-        page.on("dialog", lambda d: d.accept(f"https://www.youtube.com/watch?v={LIVE_ID}"))
         page.goto(f"{http_root}/app.html")
         page.click("#ytAdd")
+        page.fill("#sourceUrl", f"https://www.youtube.com/watch?v={LIVE_ID}")
+        page.click("#sourceSubmit")
         page.wait_for_function("typeof ytReady !== 'undefined' && ytReady", timeout=30000)
         page.wait_for_function("curDur() > 60", timeout=20000)
         page.wait_for_function("curTime() > 0.5", timeout=20000)

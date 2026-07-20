@@ -1,6 +1,6 @@
 # Test suite for app.html — run from the repo root with:
 #
-#   uv run --with pytest --with playwright pytest tests/ -q
+#   uv run --with-requirements requirements-dev.txt pytest tests/ -q
 #
 # Uses the installed Google Chrome (or Edge) via Playwright, so there is nothing
 # to download. YouTube tests run against a mocked IFrame API (tests/fake_yt.js);
@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 FAKE_YT = (pathlib.Path(__file__).parent / "fake_yt.js").read_text()
+FAKE_GOOGLE = (pathlib.Path(__file__).parent / "fake_google.js").read_text()
 
 BROWSER_ARGS = ["--autoplay-policy=no-user-gesture-required", "--mute-audio"]
 
@@ -89,9 +90,13 @@ def page(context):
 
 @pytest.fixture
 def app(page, http_root):
-    """app.html served over http, with the YouTube IFrame API replaced by the mock."""
+    """app.html served over http, with external player/account APIs mocked."""
     page.route("**/iframe_api", lambda route: route.fulfill(
         content_type="application/javascript", body=FAKE_YT))
+    page.route("https://accounts.google.com/gsi/client", lambda route: route.fulfill(
+        content_type="application/javascript", body=FAKE_GOOGLE))
+    page.route("https://apis.google.com/js/api.js", lambda route: route.fulfill(
+        content_type="application/javascript", body=FAKE_GOOGLE))
     page.goto(f"{http_root}/app.html")
     return page
 

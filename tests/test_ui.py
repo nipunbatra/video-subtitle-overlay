@@ -180,3 +180,65 @@ def test_shift_arrows_navigate_items(app):
     assert app.evaluate("activeIdx") == 1
     app.keyboard.press("Shift+ArrowLeft")
     app.wait_for_function("activeIdx === 0")
+
+
+def test_auto_size_tracks_stage_and_can_be_disabled(app):
+    app.set_viewport_size({"width": 1280, "height": 800})
+    setup_video(app)
+    app.wait_for_timeout(100)
+    desktop = app.evaluate("parseFloat(getComputedStyle(metaEl).fontSize)")
+    desktop_scale = app.evaluate("stageScale")
+
+    app.set_viewport_size({"width": 390, "height": 760})
+    app.wait_for_function("stageScale <= 0.63")
+    mobile = app.evaluate("parseFloat(getComputedStyle(metaEl).fontSize)")
+    assert mobile < desktop
+    assert desktop_scale > app.evaluate("stageScale")
+
+    app.click("#menuToggle")
+    app.click("#fitToggle")
+    assert app.text_content("#fitToggle .lbl") == "Auto size: off"
+    assert app.evaluate("stageScale") == 1
+    app.reload()
+    assert app.text_content("#fitToggle .lbl") == "Auto size: off"
+    assert app.evaluate("adaptiveScale") is False
+
+
+def test_compact_mobile_header_and_clear_empty_state(app):
+    app.set_viewport_size({"width": 320, "height": 680})
+    assert app.locator("header").evaluate("el => el.scrollWidth <= el.clientWidth")
+    assert app.evaluate("document.documentElement.scrollWidth === 320")
+    assert "Choose a video to begin" in app.text_content("#placeholder")
+    assert not app.locator("#metaToggle").is_visible()
+
+    app.click("#menuToggle")
+    assert app.locator("#metaToggle").is_visible()
+    app.click("#menuPresent")
+    assert app.evaluate("document.body.classList.contains('present')")
+    app.keyboard.press("p")
+    assert not app.evaluate("document.body.classList.contains('present')")
+
+
+def test_mobile_overlays_do_not_collide_and_library_is_accessible(app):
+    app.set_viewport_size({"width": 390, "height": 760})
+    setup_video(app)
+    app.wait_for_function("document.querySelector('#meta').textContent.length > 0")
+    meta = app.locator("#meta").bounding_box()
+    clock = app.locator("#clock").bounding_box()
+    assert meta["y"] >= clock["y"] + clock["height"]
+    assert meta["x"] >= 0 and meta["x"] + meta["width"] <= 390
+
+    app.click("#libraryToggle")
+    assert app.evaluate("document.body.classList.contains('library-open')")
+    assert app.get_attribute("#libraryToggle", "aria-expanded") == "true"
+    app.click("#list .item")
+    assert not app.evaluate("document.body.classList.contains('library-open')")
+
+
+def test_source_dialog_traps_shortcuts_and_closes_with_escape(app):
+    app.click("#ytAdd")
+    assert app.locator("#sourceUrl").evaluate("el => document.activeElement === el")
+    app.keyboard.press("p")
+    assert not app.evaluate("document.body.classList.contains('present')")
+    app.keyboard.press("Escape")
+    assert app.locator("#sourceModal").evaluate("el => el.classList.contains('hidden')")

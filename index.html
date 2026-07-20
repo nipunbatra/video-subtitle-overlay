@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Video Subtitle Overlay — local video with subtitles & metadata for screen sharing</title>
-<meta name="description" content="A single local HTML file that plays your video with synced subtitles and a constant metadata overlay — built for sharing a Chrome tab over Google Meet, Zoom, or any screen share.">
+<title>Video Subtitle Overlay — subtitles and metadata for screen sharing</title>
+<meta name="description" content="Play local, YouTube, Google Drive, or direct-link video with synced subtitles and responsive metadata/timecode overlays for screen sharing.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23171a20'/%3E%3Cpath d='M13 23h38v28H13z' fill='%236e9eea'/%3E%3Cpath d='m13 23 7-10h10l-7 10m10 0 7-10h11l-7 10' fill='none' stroke='%23edf0f5' stroke-width='5'/%3E%3Cpath d='m28 31 13 7-13 7z' fill='%2307101d'/%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #0e0f13; --panel: #171a21; --line: #262b36;
@@ -223,12 +224,13 @@
     <p class="sub">Everything renders inside the browser tab — nothing extra to install.</p>
     <div class="grid">
       <div class="card"><h3>Auto-matched files</h3><p>Pick a folder; each video finds its same-named <code>.vtt</code>/<code>.srt</code> subtitles and <code>.json</code>/<code>.txt</code> metadata automatically.</p></div>
-      <div class="card"><h3>YouTube links too</h3><p>Paste a YouTube link (or drag one onto the page) — it plays in an embedded player with the same overlays drawn on top.</p></div>
+      <div class="card"><h3>Local, Drive, or web</h3><p>Play local files, YouTube links, public Drive URLs, private videos chosen through Google's Picker, and direct HTTP(S) media.</p></div>
+      <div class="card"><h3>Remote buffering</h3><p>Stream normally or buffer a complete remote file in memory before playback, with progress and safe fallback.</p></div>
       <div class="card"><h3>Constant metadata</h3><p>A persistent overlay (title, date, anything) stays on screen for the whole clip — perfect for context during a lecture or talk.</p></div>
       <div class="card"><h3>Synced subtitles</h3><p>Custom WebVTT renderer styled for readability on a shared screen. Resize and reposition on the fly.</p></div>
-      <div class="card"><h3>Live timecode</h3><p>An always-visible <code>current / duration</code> readout for the audience.</p></div>
+      <div class="card"><h3>Responsive overlays</h3><p>Timecode, metadata, and subtitles adapt to the video area while keeping manual size and position controls.</p></div>
       <div class="card"><h3>Presentation mode</h3><p>One key hides all the chrome so the video fills the tab — clean to share.</p></div>
-      <div class="card"><h3>100% local & private</h3><p>No uploads, no server, no dependencies. Your files never leave your machine — only YouTube items stream from YouTube.</p></div>
+      <div class="card"><h3>Local-file privacy</h3><p>Files you select stay inside your browser. Linked videos connect directly to the source host you chose.</p></div>
     </div>
   </div>
 </section>
@@ -256,7 +258,7 @@
       <li>Share the <b>Chrome Tab</b> in Meet/Zoom and tick <b>“Also share tab audio.”</b></li>
     </ol>
     <div class="note">Playback uses the browser's codecs — <b>MP4 (H.264)</b> and <b>WebM</b> are the safe bets. <code>.mkv</code>/<code>.avi</code> may not decode in Chrome.</div>
-    <div class="note"><b>YouTube:</b> click <b>▶ YouTube link</b> in the app (or drag a URL onto the page). A YouTube item's base name is its <b>video ID</b>, so the same-name rule still works — add metadata via <b>✎ New metadata → Apply to current</b>, or add sidecar files named after the ID (<code>dQw4w9WgXcQ.vtt</code> / <code>.json</code>). Works on the <a href="app.html">hosted app</a> or any http-served copy — YouTube refuses to play inside a page opened as a local <code>file://</code>, so a downloaded <code>app.html</code> needs a tiny server (<code>python3 -m http.server</code>) for this one feature.</div>
+    <div class="note"><b>Linked video:</b> click <b>＋ Add link</b> for YouTube, a public Google Drive video file, or a direct HTTP(S) media URL. For a private Drive video, use <b>Menu → Open from Google Drive</b>; the official Picker grants access only to the file you choose. Remote links stream with browser preloading, while private Drive files and the optional safety mode use a bounded in-memory buffer. Same-named subtitle and metadata sidecars still attach.</div>
   </div>
 </section>
 
@@ -285,7 +287,7 @@
 <section id="run">
   <div class="wrap">
     <h2>Run locally — just download one file</h2>
-    <p class="sub">No install, no sign-up, and <b>nothing is ever uploaded</b> — your videos stay on your machine. The whole app is the single file <code>app.html</code>.</p>
+    <p class="sub">No install or sign-up. Local files stay in your browser; remote links connect only to their source host. The whole app is the single file <code>app.html</code>.</p>
 
     <p><b>1. Download <code>app.html</code></b></p>
 <pre><span style="color:var(--muted)"># macOS / Linux</span>
@@ -293,7 +295,7 @@ curl -O https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main
 
 <span style="color:var(--muted)"># Windows (PowerShell)</span>
 iwr https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html -OutFile app.html</pre>
-    <p>No terminal? Open the <a href="https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html">raw file</a> and choose <b>Save Page As… → <code>app.html</code></b>.</p>
+    <p>No terminal? Use <b>Menu → Download raw HTML</b> inside the app, or open the <a href="https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html">raw file</a> and choose <b>Save Page As… → <code>app.html</code></b>.</p>
 
     <p><b>2. Open it in Chrome</b></p>
 <pre><span style="color:var(--muted)">macOS  </span>  open -a "Google Chrome" app.html
@@ -301,14 +303,15 @@ iwr https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app
 <span style="color:var(--muted)">Windows</span>  start chrome app.html         <span style="color:var(--muted)"># or just double-click the file</span></pre>
 
     <div class="note">A Chromium browser (Chrome, Edge, Brave) is recommended — <b>Pick folder</b> and <b>“share tab audio”</b> work best there. Prefer not to download? The <a href="app.html">hosted app</a> works too and still keeps every file on your machine.</div>
-    <p class="sub" style="margin-top:22px">Coming later: open videos straight from a shared <b>Google Drive</b> folder — same workflow, without downloading them first.</p>
+    <p class="sub" style="margin-top:22px">You can now paste a shared <b>Google Drive video file</b> directly in the app. Folder links are not supported; use the individual file's sharing link.</p>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
     Open source under the MIT License ·
-    <a href="https://github.com/nipunbatra/video-subtitle-overlay">github.com/nipunbatra/video-subtitle-overlay</a>
+    <a href="https://github.com/nipunbatra/video-subtitle-overlay">github.com/nipunbatra/video-subtitle-overlay</a> ·
+    <a href="privacy.html">Privacy</a>
   </div>
 </footer>
 

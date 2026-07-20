@@ -3,31 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Video + Subtitles + Metadata</title>
+<meta name="description" content="Play local, YouTube, Google Drive, or direct-link video with synced subtitles, metadata, and a responsive timecode overlay.">
+<meta name="theme-color" content="#12151b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23171a20'/%3E%3Cpath d='M13 23h38v28H13z' fill='%236e9eea'/%3E%3Cpath d='m13 23 7-10h10l-7 10m10 0 7-10h11l-7 10' fill='none' stroke='%23edf0f5' stroke-width='5'/%3E%3Cpath d='m28 31 13 7-13 7z' fill='%2307101d'/%3E%3C/svg%3E">
+<title>Video Subtitle Overlay</title>
 <style>
   :root {
     --sub-size: 34px;
     --meta-size: 18px;
-    --ui-scale: 1;
+    --effective-scale: 1;
     --bg: #0e0f13;
-    --panel: #171a21;
-    --line: #262b36;
-    --accent: #4f8cff;
-    --text: #e7eaf0;
-    --muted: #8b93a3;
+    --panel: #171a20;
+    --panel-raised: #1d222b;
+    --line: #2a303b;
+    --accent: #6e9eea;
+    --accent-strong: #82adf0;
+    --text: #edf0f5;
+    --muted: #9ba4b3;
+    --danger: #ff9a9a;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body {
     background: var(--bg);
     color: var(--text);
-    font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font: 14px/1.4 "Avenir Next", "Segoe UI Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     display: grid;
     grid-template-columns: 300px 1fr;
     grid-template-rows: auto 1fr;
     grid-template-areas: "header header" "side main";
-    height: 100vh;
+    height: 100dvh;
   }
+  .skip-link { position: fixed; top: 8px; left: 8px; transform: translateY(-180%); z-index: 100; background: var(--accent); color: #08101c; padding: 8px 12px; border-radius: 7px; font-weight: 700; }
+  .skip-link:focus { transform: translateY(0); }
   header {
     grid-area: header;
     display: flex;
@@ -38,7 +46,7 @@
     background: var(--panel);
     flex-wrap: wrap;
   }
-  header h1 { font-size: 14px; margin: 0; font-weight: 600; }
+  header h1 { font-size: 14px; margin: 0; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
   .spacer { flex: 1; }
   button, label.btn {
     background: #222733;
@@ -48,8 +56,12 @@
     padding: 7px 11px;
     cursor: pointer;
     font-size: 13px;
+    font-family: inherit;
+    transition: background-color 180ms ease, border-color 180ms ease, transform 120ms ease;
   }
   button:hover, label.btn:hover { background: #2b3140; }
+  button:active, label.btn:active { transform: translateY(1px); }
+  button:focus-visible, label.btn:focus-within, input:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
   button kbd {
     margin-left: 7px;
     padding: 0 5px;
@@ -62,8 +74,42 @@
     vertical-align: middle;
   }
   button.primary kbd { background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.3); color: #fff; }
-  button.primary, label.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary, label.btn.primary { background: var(--accent); border-color: var(--accent); color: #07101d; font-weight: 650; }
   input[type=file] { display: none; }
+  .mobile-only, .mobile-label { display: none; }
+  .menu-anchor { flex: 0 0 auto; }
+  #appMenu {
+    position: fixed; z-index: 70; width: min(310px, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px); overflow-y: auto;
+    padding: 7px; border: 1px solid var(--line); border-radius: 11px;
+    background: rgba(23,26,32,.97); box-shadow: 0 22px 70px rgba(0,0,0,.56);
+    backdrop-filter: blur(14px);
+  }
+  #appMenu [role=menuitem] {
+    display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px;
+    border: 0; border-radius: 7px; background: transparent; color: var(--text);
+    padding: 9px 10px; text-align: left; text-decoration: none; cursor: pointer; font: inherit;
+  }
+  #appMenu [role=menuitem]:hover, #appMenu [role=menuitem]:focus-visible { background: #252b36; }
+  #appMenu [role=menuitem] small { color: var(--muted); font-size: 10.5px; text-align: right; }
+  .menu-rule { height: 1px; margin: 5px 4px; background: var(--line); }
+  .menu-status { padding: 7px 10px 6px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+  .menu-status.connected { color: #8ce1b5; }
+  .menu-heading {
+    padding: 8px 10px 4px; color: #c3cad6; font-size: 10px; font-weight: 700;
+    letter-spacing: .09em; text-transform: uppercase;
+  }
+  .menu-stepper {
+    display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 5px;
+    min-height: 40px; padding: 5px 8px 5px 10px; color: var(--text);
+  }
+  .menu-stepper span { font-size: 13px; }
+  #appMenu .menu-stepper button[role=menuitem] {
+    display: inline-flex; width: 34px; height: 30px; align-items: center; justify-content: center;
+    padding: 0; border: 1px solid var(--line); background: #222733; text-align: center;
+  }
+  #appMenu .menu-stepper button[role=menuitem]:hover,
+  #appMenu .menu-stepper button[role=menuitem]:focus-visible { background: #303746; }
 
   aside {
     grid-area: side;
@@ -71,9 +117,20 @@
     background: var(--panel);
     overflow-y: auto;
   }
-  .hint { padding: 14px; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+  .hint { padding: 18px 16px; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
   .hint code { color: var(--accent); }
-  .keys { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .hint h2 { margin: 0 0 7px; color: var(--text); font-size: 16px; letter-spacing: -.01em; }
+  .hint p { margin: 0 0 10px; }
+  .hint .quiet { color: #7f8998; font-size: 11.5px; }
+  .hint details { border-top: 1px solid var(--line); }
+  .hint summary {
+    padding: 11px 0; color: #cbd1db; font-weight: 600; cursor: pointer; user-select: none;
+  }
+  .hint summary:hover { color: var(--text); }
+  .hint details > div { padding: 0 0 12px; }
+  .hint .docs-link { display: inline-block; margin-top: 14px; color: var(--accent-strong); text-decoration: none; }
+  .hint .docs-link:hover { text-decoration: underline; }
+  .keys { margin-top: 0; }
   .keys-title { color: var(--text); font-weight: 600; margin-bottom: 8px; }
   .keys > div { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
   kbd {
@@ -102,6 +159,9 @@
   .tag.on { background: #1d3a2a; color: #6ee7a8; }
   .tag.meta.on { background: #3a2f1d; color: #f0c674; }
   .tag.yt.on { background: #3a1d1d; color: #ff9b9b; }
+  .tag.drive.on { background: #18364a; color: #8fd3ff; }
+  .tag.remote.on { background: #2d2843; color: #c9b8ff; }
+  .tag.buffer.on { background: #1c382d; color: #8ce1b5; }
 
   main {
     grid-area: main;
@@ -112,7 +172,7 @@
     justify-content: center;
     overflow: hidden;
   }
-  .stage { position: relative; width: 100%; height: 100%; }
+  .stage { position: relative; width: 100%; height: 100%; container-type: size; }
   video { width: 100%; height: 100%; background: #000; display: block; }
   /* YouTube items play in an embedded player instead of <video>; the overlays are
      siblings drawn on top, so they still show up in a shared tab */
@@ -122,16 +182,19 @@
   /* Metadata overlay (constant) */
   #meta {
     position: absolute;
-    top: 18px; left: 18px;
-    max-width: 46%;
+    top: clamp(8px, 2.2cqw, 18px); left: clamp(8px, 2.2cqw, 18px);
+    max-width: min(54%, 70ch);
+    max-height: 48%;
+    overflow: hidden;
     background: rgba(10,12,18,0.72);
-    backdrop-filter: blur(3px);
+    backdrop-filter: blur(7px);
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 10px;
-    padding: 12px 16px;
-    font-size: calc(var(--meta-size) * var(--ui-scale));
+    padding: clamp(7px, 1.4cqw, 12px) clamp(9px, 1.8cqw, 16px);
+    font-size: clamp(12px, calc(var(--meta-size) * var(--effective-scale)), 80px);
     line-height: 1.5;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
     pointer-events: none;
     text-shadow: 0 1px 3px rgba(0,0,0,0.8);
   }
@@ -141,14 +204,14 @@
   /* Live timecode */
   #clock {
     position: absolute;
-    top: 18px; right: 18px;
+    top: clamp(8px, 2.2cqw, 18px); right: clamp(8px, 2.2cqw, 18px);
     background: rgba(10,12,18,0.72);
     backdrop-filter: blur(3px);
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 8px;
-    padding: 6px 12px;
+    padding: clamp(4px, 0.8cqw, 6px) clamp(8px, 1.4cqw, 12px);
     font-variant-numeric: tabular-nums;
-    font-size: calc(18px * var(--ui-scale));
+    font-size: clamp(12px, calc(18px * var(--effective-scale)), 44px);
     font-weight: 600;
     letter-spacing: 0.5px;
     pointer-events: none;
@@ -164,7 +227,7 @@
     transform: translateX(-50%);
     max-width: 88%;
     text-align: center;
-    font-size: calc(var(--sub-size) * var(--ui-scale));
+    font-size: clamp(16px, calc(var(--sub-size) * var(--effective-scale)), 120px);
     font-weight: 600;
     line-height: 1.3;
     color: #fff;
@@ -199,6 +262,20 @@
   #subs.top { top: 8%; bottom: auto; }
   #subs:empty { display: none; }
 
+  @container (max-width: 560px) {
+    #meta {
+      top: clamp(42px, 12cqw, 54px);
+      right: 8px;
+      left: 8px;
+      max-width: none;
+      max-height: 34%;
+      line-height: 1.35;
+    }
+    #clock { top: 8px; right: 8px; }
+    #subs { bottom: 8%; max-width: 94%; }
+    #subs.top { top: 7%; }
+  }
+
   /* Move mode: drag any overlay to reposition it (double-click to reset) */
   .stage.moving #meta, .stage.moving #clock, .stage.moving #subs {
     pointer-events: auto; cursor: move;
@@ -207,23 +284,90 @@
   .stage.moving #subs:empty { display: block; min-width: 90px; min-height: 22px; }
   .stage.moving #subs:empty::after { content: "Subtitles"; opacity: 0.55; }
 
-  .placeholder { color: var(--muted); text-align: center; padding: 40px; }
+  .placeholder {
+    position: absolute; inset: 0; z-index: 3; display: grid; place-items: center;
+    color: var(--muted); text-align: center; padding: 32px; line-height: 1.6;
+    background: radial-gradient(circle at 50% 42%, #18202d 0, #0d1118 38%, #080a0e 100%);
+    pointer-events: none;
+  }
+  .placeholder-panel { width: min(520px, 100%); }
+  .placeholder-mark {
+    display: grid; width: 54px; height: 54px; margin: 0 auto 15px; place-items: center;
+    border: 1px solid #354156; border-radius: 16px; color: var(--accent-strong);
+    background: rgba(110,158,234,.09); font-size: 19px;
+  }
+  .placeholder strong { display: block; margin-bottom: 5px; color: var(--text); font-size: 20px; letter-spacing: -.02em; }
+  .placeholder span { display: block; max-width: 420px; margin: auto; }
+  .placeholder.error { color: #ffd2d2; }
+  .placeholder.error .placeholder-panel { padding: 20px; border: 1px solid rgba(255,120,120,.22); border-radius: 12px; background: rgba(60,14,18,.18); }
+  .placeholder a { color: var(--accent-strong); pointer-events: auto; }
+  #loadStatus {
+    position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 4;
+    min-width: min(360px, calc(100% - 28px)); max-width: calc(100% - 28px);
+    padding: 8px 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px;
+    color: #dbe5f5; background: rgba(12,15,21,.84); backdrop-filter: blur(8px);
+    text-align: center; font-size: 12px; pointer-events: none;
+  }
+  #loadStatus.error { color: #ffd0d0; border-color: rgba(255,120,120,.32); }
+  #loadBar { height: 2px; margin-top: 6px; background: rgba(255,255,255,.13); overflow: hidden; border-radius: 2px; }
+  #loadBar > span { display: block; width: var(--progress, 22%); height: 100%; background: var(--accent-strong); transition: width 160ms ease; }
+  #loadStatus.indeterminate #loadBar > span { width: 32%; animation: load-sweep 1.15s ease-in-out infinite; }
+  @keyframes load-sweep { from { transform: translateX(-110%); } to { transform: translateX(330%); } }
 
   /* Presentation mode: hide chrome, video fills tab */
   body.present { grid-template-columns: 0 1fr; grid-template-rows: 0 1fr; }
   body.present header, body.present aside { display: none; }
   .hidden { display: none !important; }
 
-  /* Metadata builder modal */
-  .mb-backdrop {
+  /* Link and metadata dialogs */
+  .modal-backdrop, .mb-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,0.62);
     display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px;
   }
+  .modal-backdrop.hidden,
   .mb-backdrop.hidden { display: none; }
+  .source-modal, .drive-modal,
   .mb {
     background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
     width: 540px; max-width: 100%; max-height: 90vh; overflow-y: auto; padding: 18px 20px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.5);
   }
+  .source-modal { width: 570px; }
+  .drive-modal { width: 610px; }
+  .source-modal h2 { margin: 0; font-size: 17px; letter-spacing: -0.01em; }
+  .source-modal p, .drive-modal p { color: var(--muted); font-size: 12.5px; line-height: 1.55; margin: 7px 0 14px; }
+  .source-modal label[for=sourceUrl] { display: block; color: var(--text); font-weight: 600; font-size: 12px; margin-bottom: 6px; }
+  .source-modal input[type=url], .source-modal input[type=text] {
+    width: 100%; background: #0f131b; border: 1px solid var(--line); border-radius: 8px;
+    color: var(--text); padding: 10px 11px; font: 13px/1.4 ui-monospace, Menlo, monospace;
+  }
+  .source-option { display: flex; align-items: flex-start; gap: 9px; margin-top: 13px; color: var(--text); font-size: 12.5px; cursor: pointer; }
+  .source-option input { margin-top: 2px; accent-color: var(--accent); }
+  .source-option small { display: block; color: var(--muted); line-height: 1.45; margin-top: 2px; }
+  #sourceError { min-height: 18px; margin-top: 9px; color: var(--danger); font-size: 12px; }
+  .source-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+  .drive-scope {
+    padding: 10px 12px; border-left: 3px solid var(--accent); border-radius: 0 7px 7px 0;
+    background: rgba(110,158,234,.08); color: #cbd9ec; font-size: 12px; line-height: 1.5;
+  }
+  .drive-setup { margin-top: 13px; border: 1px solid var(--line); border-radius: 9px; background: #141821; }
+  .drive-setup summary { padding: 10px 12px; color: #cbd1db; cursor: pointer; font-size: 12px; font-weight: 650; }
+  .drive-setup[open] summary { border-bottom: 1px solid var(--line); }
+  .drive-setup .drive-fields { padding: 12px; }
+  .drive-fields { display: grid; gap: 10px; }
+  .drive-fields label { color: var(--text); font-size: 11.5px; font-weight: 600; }
+  .drive-fields input {
+    display: block; width: 100%; margin-top: 5px; padding: 9px 10px; border: 1px solid var(--line);
+    border-radius: 7px; background: #0f131b; color: var(--text); font: 12px/1.4 ui-monospace, Menlo, monospace;
+  }
+  .drive-config-help { color: var(--muted); font-size: 11px; line-height: 1.5; }
+  .drive-config-help a { color: var(--accent-strong); }
+  .drive-save-row { display: flex; justify-content: flex-end; }
+  #driveStatus { min-height: 19px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+  #driveStatus.error { color: var(--danger); }
+  #driveStatus.ready { color: #8ce1b5; }
+  .drive-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+  button:disabled { cursor: not-allowed; opacity: .48; transform: none; }
   .mb-head { display: flex; align-items: center; gap: 10px; }
   .mb-head h2 { font-size: 16px; margin: 0; }
   .mb-x { margin-left: auto; background: none; border: none; color: var(--muted); font-size: 15px; cursor: pointer; padding: 4px 8px; }
@@ -264,66 +408,123 @@
   }
   .mb-actions button:hover { background: #2b3140; }
   .mb-actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  @media (max-width: 860px) {
+    body { grid-template-columns: 1fr; grid-template-areas: "header" "main"; }
+    header { gap: 8px; padding: 8px 10px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-inline: contain; }
+    header h1 { display: none; }
+    header .spacer { display: none; }
+    header > button, header > label, header > .menu-anchor { flex: 0 0 auto; }
+    button kbd, .desktop-label, .compact-secondary, .mobile-optional { display: none; }
+    .mobile-only, .mobile-label { display: inline-flex; }
+    aside {
+      display: block; position: fixed; z-index: 40; top: 0; bottom: 0; left: 0;
+      width: min(86vw, 330px); border-right: 1px solid var(--line);
+      box-shadow: 18px 0 60px rgba(0,0,0,.5); transform: translateX(-105%);
+      transition: transform 220ms ease;
+    }
+    body.library-open aside { transform: translateX(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#stage">Skip to video</a>
 <header>
-  <h1>🎬 Video + Subs + Metadata</h1>
-  <label class="btn primary">Pick folder
+  <h1>Video Overlay</h1>
+  <button id="libraryToggle" class="mobile-only" aria-controls="list" aria-expanded="false">Library</button>
+  <label class="btn primary"><span class="desktop-label">Pick folder</span><span class="mobile-label">Folder</span>
     <input type="file" id="dirInput" webkitdirectory directory multiple>
   </label>
-  <label class="btn">Pick files
+  <label class="btn compact-secondary">Pick files
     <input type="file" id="fileInput" multiple accept="video/*,.vtt,.srt,.json,.txt">
   </label>
-  <button id="ytAdd" title="Play a YouTube video by link (needs internet)">▶ YouTube link</button>
-  <button id="metaBuild" title="Build a metadata .json file">✎ New metadata</button>
+  <button id="ytAdd" title="Play a YouTube, Google Drive, or direct video link"><span class="desktop-label">＋ Add link</span><span class="mobile-label">＋ Link</span></button>
+  <button id="metaBuild" class="compact-secondary" title="Build a metadata .json file">✎ New metadata</button>
   <div class="spacer"></div>
-  <button id="metaToggle" title="Toggle metadata"><span class="lbl">Metadata: on</span><kbd>m</kbd></button>
-  <button id="subToggle" title="Toggle subtitles"><span class="lbl">Subs: on</span><kbd>s</kbd></button>
-  <button id="clockToggle" title="Toggle timecode"><span class="lbl">Time: on</span><kbd>t</kbd></button>
-  <button id="subPos" title="Subtitle position"><span class="lbl">Subs: bottom</span><kbd>b</kbd></button>
-  <button id="subBg" title="Overlay background style (subtitles, metadata, timecode)"><span class="lbl">BG: Solid</span><kbd>g</kbd></button>
-  <button id="subMinus" title="Smaller subtitles">Sub A−<kbd>−</kbd></button>
-  <button id="subPlus" title="Bigger subtitles">Sub A+<kbd>+</kbd></button>
-  <button id="metaMinus" title="Smaller metadata">Meta A−<kbd>[</kbd></button>
-  <button id="metaPlus" title="Bigger metadata">Meta A+<kbd>]</kbd></button>
-  <button id="uiMinus" title="Scale everything down">All A−<kbd>,</kbd></button>
-  <button id="uiPlus" title="Scale everything up">All A+<kbd>.</kbd></button>
-  <button id="moveToggle" title="Drag overlays to reposition — double-click an overlay to reset"><span class="lbl">Move: off</span><kbd>v</kbd></button>
-  <button id="presentBtn" title="Presentation mode">Present<kbd>p</kbd></button>
+  <button id="presentBtn" class="mobile-optional" title="Presentation mode">Present<kbd>p</kbd></button>
+  <div class="menu-anchor">
+    <button id="menuToggle" type="button" aria-haspopup="menu" aria-expanded="false">Menu ▾</button>
+    <div id="appMenu" class="hidden" role="menu" aria-label="App menu">
+      <div id="driveMenuStatus" class="menu-status">Google Drive is not connected.</div>
+      <button id="driveOpen" type="button" role="menuitem"><span>Open from Google Drive…</span><small>private files</small></button>
+      <button id="driveDisconnect" class="hidden" type="button" role="menuitem"><span>Disconnect Google Drive</span><small>revoke access</small></button>
+      <div class="menu-rule" role="separator"></div>
+      <button id="downloadHtml" type="button" role="menuitem"><span>Download raw HTML</span><small>single-file app</small></button>
+      <button id="menuPickFiles" type="button" role="menuitem"><span>Pick individual files…</span><small>video or sidecars</small></button>
+      <button id="menuMetaBuild" type="button" role="menuitem"><span>New metadata…</span><small>build a JSON file</small></button>
+      <button id="menuPresent" type="button" role="menuitem"><span>Presentation mode</span><small>press p to exit</small></button>
+      <a href="https://github.com/nipunbatra/video-subtitle-overlay" target="_blank" rel="noopener noreferrer" role="menuitem"><span>Documentation and source</span><small>GitHub</small></a>
+      <a href="privacy.html" target="_blank" rel="noopener noreferrer" role="menuitem"><span>Privacy</span><small>Google data use</small></a>
+      <div class="menu-rule" role="separator"></div>
+      <div class="menu-heading">Overlay controls</div>
+      <button id="metaToggle" type="button" role="menuitem" title="Toggle metadata"><span class="lbl">Metadata: on</span><kbd>m</kbd></button>
+      <button id="subToggle" type="button" role="menuitem" title="Toggle subtitles"><span class="lbl">Subs: on</span><kbd>s</kbd></button>
+      <button id="clockToggle" type="button" role="menuitem" title="Toggle timecode"><span class="lbl">Time: on</span><kbd>t</kbd></button>
+      <button id="subPos" type="button" role="menuitem" title="Subtitle position"><span class="lbl">Subs: bottom</span><kbd>b</kbd></button>
+      <button id="subBg" type="button" role="menuitem" title="Overlay background style (subtitles, metadata, timecode)"><span class="lbl">BG: Solid</span><kbd>g</kbd></button>
+      <button id="fitToggle" type="button" role="menuitem" title="Automatically fit overlays to the video area"><span class="lbl">Auto size: on</span><small>recommended</small></button>
+      <button id="moveToggle" type="button" role="menuitem" title="Drag overlays to reposition — double-click an overlay to reset"><span class="lbl">Move: off</span><kbd>v</kbd></button>
+      <div class="menu-stepper" role="group" aria-label="Subtitle size">
+        <span>Subtitle size</span>
+        <button id="subMinus" type="button" role="menuitem" title="Smaller subtitles" aria-label="Smaller subtitles">A−</button>
+        <button id="subPlus" type="button" role="menuitem" title="Bigger subtitles" aria-label="Bigger subtitles">A+</button>
+      </div>
+      <div class="menu-stepper" role="group" aria-label="Metadata size">
+        <span>Metadata size</span>
+        <button id="metaMinus" type="button" role="menuitem" title="Smaller metadata" aria-label="Smaller metadata">A−</button>
+        <button id="metaPlus" type="button" role="menuitem" title="Bigger metadata" aria-label="Bigger metadata">A+</button>
+      </div>
+      <div class="menu-stepper" role="group" aria-label="All overlay sizes">
+        <span>All overlay sizes</span>
+        <button id="uiMinus" type="button" role="menuitem" title="Scale everything down" aria-label="Scale all overlays down">A−</button>
+        <button id="uiPlus" type="button" role="menuitem" title="Scale everything up" aria-label="Scale all overlays up">A+</button>
+      </div>
+    </div>
+  </div>
 </header>
 
 <aside id="list">
   <div class="hint">
-    Click <b>Pick folder</b> and choose a folder containing your videos.<br><br>
-    For each video, files with the <b>same base name</b> are auto-loaded:<br>
-    • <code>talk.mp4</code> — the video<br>
-    • <code>talk.vtt</code> / <code>talk.srt</code> — subtitles<br>
-    • <code>talk.json</code> or <code>talk.txt</code> — metadata overlay<br><br>
-    No metadata file yet? Click <b>✎ New metadata</b> to build one and download the <code>.json</code>.<br><br>
-    <b>▶ YouTube link</b> plays a YouTube video with the same overlays (works on the hosted app or any http-served copy — YouTube blocks players on <code>file://</code> pages; everything else stays local). Its "base name" is the <b>video ID</b> — add metadata via <b>✎ New metadata → Apply to current</b>, or add a <code>&lt;video-id&gt;.vtt</code> / <code>.json</code> and it attaches automatically.<br><br>
-    You can also drag &amp; drop files (or a whole folder) anywhere on the page — or drag a YouTube URL straight from the address bar.<br><br>
-    Share via Chrome tab (with "Share tab audio") — subtitles and metadata are drawn in the tab, so they show in the shared view.
+    <h2>Open a video</h2>
+    <p><b>Pick folder</b> loads local videos and their matching subtitle or metadata files.</p>
+    <p><b>＋ Add link</b> opens YouTube, public Drive, or direct video URLs. For a private Drive file, use <b>Menu → Open from Google Drive</b>.</p>
+    <p class="quiet">Files stay in your browser. Private Drive access is limited to the file you choose—never Gmail or your full Drive.</p>
 
-    <div class="keys">
-      <div class="keys-title">Keyboard shortcuts</div>
-      <div><kbd>Space</kbd> play / pause</div>
-      <div><kbd>m</kbd> metadata on / off</div>
-      <div><kbd>s</kbd> subtitles on / off</div>
-      <div><kbd>t</kbd> timecode on / off</div>
-      <div><kbd>b</kbd> subtitles top / bottom</div>
-      <div><kbd>g</kbd> overlay background style</div>
-      <div><kbd>+</kbd> <kbd>−</kbd> subtitle size</div>
-      <div><kbd>]</kbd> <kbd>[</kbd> metadata size</div>
-      <div><kbd>.</kbd> <kbd>,</kbd> scale everything</div>
-      <div><kbd>v</kbd> move / drag overlays</div>
-      <div><kbd>p</kbd> presentation mode</div>
-      <div><kbd>⇧</kbd><kbd>→</kbd> / <kbd>⇧</kbd><kbd>←</kbd> next / prev video</div>
-      <div><kbd>←</kbd> <kbd>→</kbd> seek (video focused)</div>
-    </div>
-    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px;">
-      <a href="https://github.com/nipunbatra/video-subtitle-overlay" style="color:var(--accent);text-decoration:none;">Docs &amp; source on GitHub →</a>
-    </div>
+    <details>
+      <summary>File naming and sidecars</summary>
+      <div>Give related files the same base name:<br>
+        • <code>talk.mp4</code> — video<br>
+        • <code>talk.vtt</code> / <code>talk.srt</code> — subtitles<br>
+        • <code>talk.json</code> / <code>talk.txt</code> — metadata<br><br>
+        For linked videos, the base name is the YouTube/Drive ID or remote filename. <b>New metadata</b> can apply directly to the current video.
+      </div>
+    </details>
+    <details>
+      <summary>More ways to add and share</summary>
+      <div>Drag files, a whole folder, or a supported video URL onto the page. For screen sharing, share the Chrome tab and enable <b>Share tab audio</b>; every overlay appears in the shared view.</div>
+    </details>
+    <details>
+      <summary>Keyboard shortcuts</summary>
+      <div class="keys">
+        <div><kbd>Space</kbd> play / pause</div>
+        <div><kbd>m</kbd> metadata on / off</div>
+        <div><kbd>s</kbd> subtitles on / off</div>
+        <div><kbd>t</kbd> timecode on / off</div>
+        <div><kbd>b</kbd> subtitles top / bottom</div>
+        <div><kbd>g</kbd> overlay background style</div>
+        <div><kbd>+</kbd> <kbd>−</kbd> subtitle size</div>
+        <div><kbd>]</kbd> <kbd>[</kbd> metadata size</div>
+        <div><kbd>.</kbd> <kbd>,</kbd> scale everything</div>
+        <div><kbd>v</kbd> move / drag overlays</div>
+        <div><kbd>p</kbd> presentation mode</div>
+        <div><kbd>⇧</kbd><kbd>→</kbd> / <kbd>⇧</kbd><kbd>←</kbd> next / prev</div>
+      </div>
+    </details>
+    <a class="docs-link" href="https://github.com/nipunbatra/video-subtitle-overlay">Docs &amp; source on GitHub →</a>
   </div>
 </aside>
 
@@ -334,9 +535,62 @@
     <div id="meta"></div>
     <div id="clock" class="hide">0:00</div>
     <div id="subs"></div>
-    <div id="placeholder" class="placeholder">No video loaded</div>
+    <div id="placeholder" class="placeholder">
+      <div class="placeholder-panel">
+        <div class="placeholder-mark" aria-hidden="true">▶</div>
+        <strong>Choose a video to begin</strong>
+        <span>Pick a local folder, add a video link, or open a private Drive file from the menu.</span>
+      </div>
+    </div>
+    <div id="loadStatus" class="hidden" role="status" aria-live="polite"><span id="loadText"></span><div id="loadBar"><span></span></div></div>
   </div>
 </main>
+
+<div id="sourceModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="sourceTitle">
+  <form id="sourceForm" class="source-modal" novalidate>
+    <h2 id="sourceTitle">Add a video link</h2>
+    <p>Paste a YouTube link, a Google Drive file link, or a direct <code>https://…/video.mp4</code> URL. Drive files must be shared as <b>Anyone with the link</b> and allow downloads.</p>
+    <label for="sourceUrl">Video URL</label>
+    <input id="sourceUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://drive.google.com/file/d/…/view" required>
+    <label class="source-option">
+      <input id="sourceBuffer" type="checkbox">
+      <span>Buffer the full remote file before playing
+        <small>Useful on an unreliable connection. This can use substantial memory; YouTube manages its own buffer, and hosts that block browser downloads will fall back to streaming.</small>
+      </span>
+    </label>
+    <div id="sourceError" role="alert"></div>
+    <div class="source-actions">
+      <button id="sourceCancel" type="button">Cancel</button>
+      <button id="sourceSubmit" class="primary" type="submit">Add video</button>
+    </div>
+  </form>
+</div>
+
+<div id="driveModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="driveTitle">
+  <section class="drive-modal">
+    <h2 id="driveTitle">Open a private Drive video</h2>
+    <p>Connect a Google Account, then choose one video in Google's own file picker. The app never requests Gmail access or permission to list your entire Drive.</p>
+    <div class="drive-scope"><b>Permission requested:</b> view and download only the Drive files you explicitly open with this app (<code>drive.file</code>). The short-lived access token stays in memory and is never written to local storage.</div>
+    <details id="driveSetupDetails" class="drive-setup" open>
+      <summary>Site-owner setup</summary>
+      <div class="drive-fields">
+        <label>OAuth web client ID
+          <input id="driveClientId" type="text" autocomplete="off" spellcheck="false" placeholder="123456789-….apps.googleusercontent.com">
+        </label>
+        <label>Google Picker API key
+          <input id="driveApiKey" type="text" autocomplete="off" spellcheck="false" placeholder="AIza…">
+        </label>
+        <div class="drive-config-help">Needed once per deployment—not per user. These are public browser identifiers, never a client secret or refresh token. A fixed hosted app should place them in <code>BUILTIN_GOOGLE_CONFIG</code>. See the <a href="https://github.com/nipunbatra/video-subtitle-overlay#private-google-drive-setup" target="_blank" rel="noopener noreferrer">setup instructions</a>.</div>
+        <div class="drive-save-row"><button id="driveSave" type="button">Save browser configuration</button></div>
+      </div>
+    </details>
+    <div id="driveStatus" role="status" aria-live="polite">Enter the deployment credentials once, then save them.</div>
+    <div class="drive-actions">
+      <button id="driveCancel" type="button">Cancel</button>
+      <button id="driveConnect" class="primary" type="button" disabled>Continue with Google</button>
+    </div>
+  </section>
+</div>
 
 <div id="mbModal" class="mb-backdrop hidden" role="dialog" aria-modal="true" aria-label="Metadata builder">
   <div class="mb">
@@ -372,6 +626,9 @@ const subsEl = $('subs');
 const clockEl = $('clock');
 const listEl = $('list');
 const placeholder = $('placeholder');
+const stageDiv = document.querySelector('.stage');
+const loadStatus = $('loadStatus');
+const loadText = $('loadText');
 
 let items = [];
 let cues = [];
@@ -379,7 +636,73 @@ let activeIdx = -1;
 let curKey = null;
 let curObjUrl = null;
 let showMeta = true, showSubs = true, showClock = true;
-let mbOpen = false;
+let mbOpen = false, sourceOpen = false, driveModalOpen = false;
+let loadGeneration = 0, remoteController = null, bufferingRemote = false;
+
+const RAW_APP_URL = 'https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html';
+const GOOGLE_CONFIG_KEY = 'vso-google-config-v1';
+const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const GOOGLE_VIDEO_MIMES = 'video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg,video/mpeg,video/x-matroska';
+// Public, origin-restricted browser identifiers shared with video-trim-metadata-store.
+// They are not secrets; never add its client secret, access token, or refresh token here.
+const BUILTIN_GOOGLE_CONFIG = {
+  clientId: '754571415429-dve19qtjfntr104sk8a70tb4rt79mgsc.apps.googleusercontent.com',
+  apiKey: 'AIzaSyDrzxPeI6fgzad5yrsJCaf6vhomX_4kT0Y',
+};
+let googleConfig = loadGoogleConfig();
+let googleLibrariesPromise = null, googleTokenClient = null, googlePickerReady = false;
+let googleAccessToken = null, googleTokenExpiresAt = 0;
+
+const itemKey = it => it.key || (it.dir + '||' + it.name);
+
+function validateGoogleConfig(clientId, apiKey){
+  clientId = (clientId || '').trim(); apiKey = (apiKey || '').trim();
+  const cm = clientId.match(/^([0-9]+)-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/);
+  if (!cm) return { valid: false, error: 'Enter a valid OAuth web client ID.' };
+  if (!/^AIza[A-Za-z0-9_-]{30,}$/.test(apiKey)) return { valid: false, error: 'Enter a valid browser API key.' };
+  return { valid: true, clientId, apiKey, appId: cm[1] };
+}
+function loadGoogleConfig(){
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(GOOGLE_CONFIG_KEY) || 'null'); } catch(e){}
+  const candidate = stored || BUILTIN_GOOGLE_CONFIG;
+  const checked = validateGoogleConfig(candidate.clientId, candidate.apiKey);
+  return checked.valid ? checked : { clientId: candidate.clientId || '', apiKey: candidate.apiKey || '', appId: '' };
+}
+function persistGoogleConfig(config){
+  googleConfig = config;
+  try { localStorage.setItem(GOOGLE_CONFIG_KEY, JSON.stringify({ clientId: config.clientId, apiKey: config.apiKey })); } catch(e){}
+}
+function hasGoogleToken(){ return !!googleAccessToken && Date.now() < googleTokenExpiresAt; }
+
+function setPlaceholder(message, kind='', link=null){
+  placeholder.replaceChildren();
+  placeholder.className = 'placeholder' + (kind ? ' ' + kind : '');
+  const panel = document.createElement('div');
+  panel.className = 'placeholder-panel';
+  panel.appendChild(document.createTextNode(message));
+  if (link){
+    panel.appendChild(document.createElement('br'));
+    const a = document.createElement('a');
+    a.href = link.href; a.textContent = link.label; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    panel.appendChild(a);
+  }
+  placeholder.appendChild(panel);
+  placeholder.classList.remove('hidden');
+}
+function hidePlaceholder(){ placeholder.classList.add('hidden'); placeholder.classList.remove('error'); }
+function setLoadStatus(message='', progress=null, kind=''){
+  if (!message){ loadStatus.className = 'hidden'; loadText.textContent = ''; return; }
+  loadText.textContent = message;
+  loadStatus.className = kind || '';
+  if (progress === null){
+    loadStatus.classList.add('indeterminate');
+    loadStatus.style.removeProperty('--progress');
+  } else {
+    loadStatus.classList.remove('indeterminate');
+    loadStatus.style.setProperty('--progress', Math.max(0, Math.min(100, progress)) + '%');
+  }
+}
 
 function fmtTime(s){
   if (!isFinite(s) || s < 0) s = 0;
@@ -428,7 +751,7 @@ function indexFiles(fileList){
 function addFiles(fileList){
   const { videos, orphans } = indexFiles(fileList);
   // merge with existing by dir+name (so dropping more files augments)
-  const map = new Map(items.map(i => [i.dir+'||'+i.name, i]));
+  const map = new Map(items.map(i => [itemKey(i), i]));
   for (const it of videos){
     const k = it.dir+'||'+it.name;
     if (map.has(k)){
@@ -446,11 +769,11 @@ function addFiles(fileList){
     if (!t) continue;
     if (o.vtt) t.vtt = o.vtt;
     if (o.meta){ t.meta = o.meta; t.metaType = o.metaType; }
-    if (t.dir+'||'+t.name === curKey) activeTouched = true;
+    if (itemKey(t) === curKey) activeTouched = true;
   }
   items = [...map.values()].sort((a,b)=> (a.dir+a.name).localeCompare(b.dir+b.name));
   // keep the currently-playing item selected even though the list re-sorted
-  activeIdx = curKey ? items.findIndex(it => (it.dir+'||'+it.name) === curKey) : -1;
+  activeIdx = curKey ? items.findIndex(it => itemKey(it) === curKey) : -1;
   renderList();
   if (activeIdx < 0 && items.length) load(0);
   else if (activeTouched) loadSides(items[activeIdx]);
@@ -479,12 +802,21 @@ function renderList(){
     }
     const tags = document.createElement('div');
     tags.className = 'tags';
-    tags.innerHTML =
-      (it.type === 'yt' ? `<span class="tag yt on">▶ youtube</span>` : '') +
-      `<span class="tag sub ${it.vtt?'on':''}">${it.vtt?'subtitles':'no subs'}</span>` +
-      `<span class="tag meta ${it.meta?'on':''}">${it.meta?('meta·'+it.metaType):'no meta'}</span>`;
+    const addTag = (cls, text, on=true) => {
+      const tag = document.createElement('span');
+      tag.className = 'tag ' + cls + (on ? ' on' : '');
+      tag.textContent = text;
+      tags.appendChild(tag);
+    };
+    if (it.type === 'yt') addTag('yt', '▶ youtube');
+    if (it.type === 'gdrive') addTag('drive', 'drive');
+    if (it.type === 'gdrive-auth') addTag('drive', 'my drive');
+    if (it.type === 'remote') addTag('remote', 'web');
+    if ((it.type === 'gdrive' || it.type === 'gdrive-auth' || it.type === 'remote') && it.buffer) addTag('buffer', 'full buffer');
+    addTag('sub', it.vtt ? 'subtitles' : 'no subs', !!it.vtt);
+    addTag('meta', it.meta ? ('meta·' + it.metaType) : 'no meta', !!it.meta);
     div.appendChild(tags);
-    div.onclick = () => load(i);
+    div.onclick = () => { load(i); setLibraryOpen(false); };
     listEl.appendChild(div);
   });
 }
@@ -582,7 +914,7 @@ function updateClockVisibility(){
   clockEl.classList.toggle('hide', !(showClock && activeIdx >= 0));
 }
 async function loadSides(it){
-  const key = it.dir + '||' + it.name;
+  const key = itemKey(it);
   cues = [];
   lastCueText = null;
   subsEl.innerHTML = '';
@@ -604,35 +936,170 @@ async function loadSides(it){
   }
   renderMeta(curMetaText, curMetaType);
 }
+
+const MAX_BUFFER_BYTES = 1024 * 1024 * 1024; // protect the tab from accidental multi-GB allocations
+function releaseObjectUrl(){
+  if (curObjUrl){ URL.revokeObjectURL(curObjUrl); curObjUrl = null; }
+}
+function prepareHtmlVideo(){
+  stopYouTube();
+  ytwrap.classList.add('hidden');
+  video.classList.remove('hidden');
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+  video.preload = 'auto';
+}
+function playHtmlSource(url){
+  video.src = url;
+  video.load();
+  video.play().catch(()=>{});
+}
+async function fetchBufferedMedia(url, { signal, headers={}, fallbackType='video/mp4', onProgress=()=>{} }={}){
+    const response = await fetch(url, { signal, headers, credentials: 'omit' });
+    if (!response.ok){
+      const err = new Error('server returned ' + response.status); err.status = response.status; throw err;
+    }
+    const type = (response.headers.get('content-type') || '').toLowerCase();
+    if (type.includes('text/html')) throw new Error('the host returned a web page instead of video data');
+    const total = Number(response.headers.get('content-length')) || 0;
+    if (total > MAX_BUFFER_BYTES) throw new Error('the file is larger than the 1 GB in-memory buffer limit');
+
+    const chunks = [];
+    let received = 0;
+    if (response.body && response.body.getReader){
+      const reader = response.body.getReader();
+      while (true){
+        const { done, value } = await reader.read();
+        if (done) break;
+        received += value.byteLength;
+        if (received > MAX_BUFFER_BYTES){ await reader.cancel(); throw new Error('the file exceeded the 1 GB in-memory buffer limit'); }
+        chunks.push(value);
+        onProgress(received, total);
+      }
+    } else {
+      const blob = await response.blob();
+      if (blob.size > MAX_BUFFER_BYTES) throw new Error('the file exceeded the 1 GB in-memory buffer limit');
+      chunks.push(blob); received = blob.size;
+    }
+    return { blob: new Blob(chunks, { type: type || fallbackType }), received };
+}
+async function bufferRemoteSource(it, generation){
+  remoteController = new AbortController();
+  bufferingRemote = true;
+  setLoadStatus('Preparing full buffer…');
+  try {
+    const { blob, received } = await fetchBufferedMedia(it.mediaUrl, {
+      signal: remoteController.signal,
+      onProgress: (received, total) => {
+        const amount = total ? Math.round(received / total * 100) : null;
+        setLoadStatus(total ? `Buffering remote video… ${amount}%` : `Buffering remote video… ${formatBytes(received)}`, amount);
+      },
+    });
+    if (generation !== loadGeneration || itemKey(it) !== curKey) return;
+    releaseObjectUrl();
+    curObjUrl = URL.createObjectURL(blob);
+    setLoadStatus(`Buffered ${formatBytes(received)}. Starting playback…`, 100);
+    playHtmlSource(curObjUrl);
+  } catch(e){
+    if (e.name === 'AbortError' || generation !== loadGeneration) return;
+    console.warn('full remote buffer unavailable; falling back to streaming', e);
+    setLoadStatus(`Full buffering unavailable (${e.message}). Streaming with browser preloading instead.`, 0);
+    playHtmlSource(it.mediaUrl);
+  } finally {
+    if (generation === loadGeneration) bufferingRemote = false;
+  }
+}
+async function bufferAuthenticatedDriveSource(it, generation){
+  if (!hasGoogleToken()){
+    setLoadStatus();
+    setPlaceholder('Google Drive access has expired. Open the menu and reconnect Drive to load this private video.', 'error');
+    updateDriveMenu();
+    return;
+  }
+  remoteController = new AbortController();
+  bufferingRemote = true;
+  setLoadStatus('Securely buffering the selected Drive video…');
+  try {
+    const { blob, received } = await fetchBufferedMedia(it.mediaUrl, {
+      signal: remoteController.signal,
+      headers: { Authorization: 'Bearer ' + googleAccessToken },
+      fallbackType: it.mimeType || 'video/mp4',
+      onProgress: (received, total) => {
+        const amount = total ? Math.round(received / total * 100) : null;
+        setLoadStatus(total ? `Buffering private Drive video… ${amount}%` : `Buffering private Drive video… ${formatBytes(received)}`, amount);
+      },
+    });
+    if (generation !== loadGeneration || itemKey(it) !== curKey) return;
+    releaseObjectUrl();
+    curObjUrl = URL.createObjectURL(blob);
+    setLoadStatus(`Buffered ${formatBytes(received)} from Google Drive. Starting playback…`, 100);
+    playHtmlSource(curObjUrl);
+  } catch(e){
+    if (e.name === 'AbortError' || generation !== loadGeneration) return;
+    console.warn('private Google Drive download failed', e);
+    if (e.status === 401 || e.status === 403) clearGoogleAuthorization(false);
+    setLoadStatus();
+    setPlaceholder(
+      e.status === 401 || e.status === 403
+        ? 'Google Drive access expired or this file was not granted to the app. Reconnect and choose the file again.'
+        : 'Could not buffer this private Drive video: ' + e.message,
+      'error'
+    );
+  } finally {
+    if (generation === loadGeneration) bufferingRemote = false;
+  }
+}
+function formatBytes(bytes){
+  if (!isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B','KB','MB','GB'];
+  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  const n = bytes / Math.pow(1024, i);
+  return (n >= 10 || i === 0 ? n.toFixed(0) : n.toFixed(1)) + ' ' + units[i];
+}
 async function load(i){
   const it = items[i];
   if (!it) return;
+  const generation = ++loadGeneration;
+  if (remoteController){ remoteController.abort(); remoteController = null; }
+  bufferingRemote = false;
+  setLoadStatus();
   activeIdx = i;
-  curKey = it.dir + '||' + it.name;
+  curKey = itemKey(it);
   renderList();
-  placeholder.classList.add('hidden');
+  hidePlaceholder();
   lastClock = null;
   updateClockVisibility();
+  const sides = loadSides(it);
 
   if (it.type === 'yt'){
-    if (curObjUrl){ URL.revokeObjectURL(curObjUrl); curObjUrl = null; }
+    releaseObjectUrl();
     video.pause();
     video.removeAttribute('src');
     video.load();
     video.classList.add('hidden');
     ytwrap.classList.remove('hidden');
     playYouTube(it.ytId);
+  } else if (it.type === 'gdrive-auth') {
+    releaseObjectUrl();
+    prepareHtmlVideo();
+    bufferAuthenticatedDriveSource(it, generation);
+  } else if (it.type === 'gdrive' || it.type === 'remote') {
+    releaseObjectUrl();
+    prepareHtmlVideo();
+    if (it.buffer) bufferRemoteSource(it, generation);
+    else {
+      setLoadStatus(it.type === 'gdrive' ? 'Connecting to Google Drive…' : 'Loading remote video…');
+      playHtmlSource(it.mediaUrl);
+    }
   } else {
-    stopYouTube();
-    ytwrap.classList.add('hidden');
-    video.classList.remove('hidden');
-    if (curObjUrl) URL.revokeObjectURL(curObjUrl);
+    prepareHtmlVideo();
+    releaseObjectUrl();
     curObjUrl = URL.createObjectURL(it.video);
-    video.src = curObjUrl;
-    video.play().catch(()=>{});
+    playHtmlSource(curObjUrl);
   }
 
-  await loadSides(it);
+  await sides;
 }
 
 /* ---------- YouTube (official IFrame Player API) ---------- */
@@ -660,6 +1127,72 @@ function parseYouTubeId(text){
     }
   }
   return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+}
+
+function parseGoogleDriveId(text){
+  let u;
+  try { u = new URL((text || '').trim()); } catch(e){ return null; }
+  const host = u.hostname.replace(/^www\./, '');
+  if (host !== 'drive.google.com' && host !== 'drive.usercontent.google.com') return null;
+  let id = u.searchParams.get('id');
+  if (!id){
+    const m = u.pathname.match(/^\/file\/d\/([A-Za-z0-9_-]{10,})(?:\/|$)/);
+    if (m) id = m[1];
+  }
+  return id && /^[A-Za-z0-9_-]{10,}$/.test(id) ? id : null;
+}
+function driveStreamUrl(id){
+  return 'https://drive.usercontent.google.com/download?id=' + encodeURIComponent(id) + '&export=download&confirm=t';
+}
+function remoteBaseName(u){
+  let leaf = u.pathname.split('/').filter(Boolean).pop() || u.hostname;
+  try { leaf = decodeURIComponent(leaf); } catch(e){}
+  const { base } = baseSplit(leaf);
+  return (base || u.hostname).slice(0, 120);
+}
+function parseMediaSource(text){
+  const raw = (text || '').trim();
+  const ytId = parseYouTubeId(raw);
+  if (ytId) return { type: 'yt', id: ytId };
+  const driveId = parseGoogleDriveId(raw);
+  if (driveId) return {
+    type: 'gdrive', id: driveId, mediaUrl: driveStreamUrl(driveId),
+    originalUrl: 'https://drive.google.com/file/d/' + driveId + '/view',
+  };
+  let u;
+  try { u = new URL(raw); } catch(e){ return null; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+  // A Drive folder or malformed Drive file link is not a direct media URL.
+  if (u.hostname === 'drive.google.com' || u.hostname === 'drive.usercontent.google.com') return null;
+  return { type: 'remote', url: u.href, name: remoteBaseName(u) };
+}
+function addParsedSource(source, buffer=false){
+  if (source.type === 'yt'){ addYouTube(source.id); return; }
+  let idx;
+  if (source.type === 'gdrive'){
+    idx = items.findIndex(it => it.type === 'gdrive' && it.driveId === source.id);
+    if (idx < 0){
+      items.push({
+        key: 'gdrive||' + source.id, name: source.id, dir: 'google-drive', type: 'gdrive',
+        driveId: source.id, mediaUrl: source.mediaUrl, originalUrl: source.originalUrl,
+        buffer, video: null, vtt: null, meta: null, metaType: null,
+      });
+    } else items[idx].buffer = buffer;
+  } else {
+    idx = items.findIndex(it => it.type === 'remote' && it.mediaUrl === source.url);
+    if (idx < 0){
+      let host = 'web';
+      try { host = new URL(source.url).hostname; } catch(e){}
+      items.push({
+        key: 'remote||' + source.url, name: source.name, dir: host, type: 'remote',
+        mediaUrl: source.url, originalUrl: source.url, buffer,
+        video: null, vtt: null, meta: null, metaType: null,
+      });
+    } else items[idx].buffer = buffer;
+  }
+  items.sort((a,b)=> (a.dir+a.name).localeCompare(b.dir+b.name));
+  idx = items.findIndex(it => itemKey(it) === (source.type === 'gdrive' ? 'gdrive||' + source.id : 'remote||' + source.url));
+  load(idx);
 }
 
 function loadYtApi(){
@@ -690,8 +1223,8 @@ const YT_ERRORS = {
 function ytError(msg){
   if (!isYt()) return;   // stale error after the user already switched to another item
   ytwrap.classList.add('hidden');
-  placeholder.textContent = msg;
-  placeholder.classList.remove('hidden');
+  setLoadStatus();
+  setPlaceholder(msg, 'error');
 }
 
 async function playYouTube(id){
@@ -716,6 +1249,10 @@ async function playYouTube(id){
             if (e.data === YT.PlayerState.PLAYING && !isYt()){
               try { ytPlayer.stopVideo(); } catch(_){}
             }
+            if (isYt()){
+              if (e.data === YT.PlayerState.BUFFERING) setLoadStatus('YouTube is buffering…');
+              else if (e.data === YT.PlayerState.PLAYING){ hidePlaceholder(); setLoadStatus(); }
+            }
           },
           onError: e => { ytError(YT_ERRORS[e.data] || ('YouTube playback error (code ' + e.data + ').')); },
         },
@@ -738,7 +1275,7 @@ function addYouTube(id){
   let idx = items.findIndex(it => it.type === 'yt' && it.ytId === id);
   if (idx < 0){
     // dir 'youtube' keeps the key unique even if a local root file shares the ID as its name
-    items.push({ name: id, dir: 'youtube', type: 'yt', ytId: id, video: null, vtt: null, meta: null, metaType: null });
+    items.push({ key: 'youtube||' + id, name: id, dir: 'youtube', type: 'yt', ytId: id, video: null, vtt: null, meta: null, metaType: null });
     items.sort((a,b)=> (a.dir+a.name).localeCompare(b.dir+b.name));
     idx = items.findIndex(it => it.type === 'yt' && it.ytId === id);
   }
@@ -752,13 +1289,303 @@ function curDur(){ try { return isYt() ? (ytReady ? ytPlayer.getDuration() : 0) 
 /* ---------- controls ---------- */
 $('dirInput').onchange = e => addFiles(e.target.files);
 $('fileInput').onchange = e => addFiles(e.target.files);
-$('ytAdd').onclick = () => {
-  const url = prompt('Paste a YouTube link (or 11-character video ID):');
-  if (!url) return;
-  const id = parseYouTubeId(url);
-  if (!id){ alert('Could not find a YouTube video ID in that link.'); return; }
-  addYouTube(id);
+const sourceModal = $('sourceModal'), sourceForm = $('sourceForm'), sourceUrl = $('sourceUrl');
+const sourceError = $('sourceError'), sourceBuffer = $('sourceBuffer');
+let sourceLastFocus = null;
+function openSource(){
+  sourceLastFocus = document.activeElement;
+  sourceUrl.value = ''; sourceBuffer.checked = false; sourceError.textContent = '';
+  sourceModal.classList.remove('hidden'); sourceOpen = true; sourceUrl.focus();
+}
+function closeSource(){
+  sourceModal.classList.add('hidden'); sourceOpen = false;
+  if (sourceLastFocus && sourceLastFocus.focus) sourceLastFocus.focus();
+}
+function sourceTrapFocus(e){
+  const f = [...sourceModal.querySelectorAll('button, input')].filter(el => !el.disabled && el.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+}
+$('ytAdd').onclick = openSource;
+$('sourceCancel').onclick = closeSource;
+sourceModal.addEventListener('click', e => { if (e.target === sourceModal) closeSource(); });
+sourceForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const source = parseMediaSource(sourceUrl.value);
+  if (!source){
+    sourceError.textContent = 'Use a valid YouTube link or ID, Google Drive file link, or http(s) video URL.';
+    sourceUrl.focus();
+    return;
+  }
+  addParsedSource(source, source.type !== 'yt' && sourceBuffer.checked);
+  closeSource();
+});
+
+function setLibraryOpen(on){
+  document.body.classList.toggle('library-open', on);
+  $('libraryToggle').setAttribute('aria-expanded', String(on));
+}
+$('libraryToggle').onclick = () => setLibraryOpen(!document.body.classList.contains('library-open'));
+
+/* ---------- app menu, raw download & private Google Drive ---------- */
+const appMenu = $('appMenu'), menuToggle = $('menuToggle');
+const driveModal = $('driveModal'), driveClientId = $('driveClientId'), driveApiKey = $('driveApiKey');
+const driveStatus = $('driveStatus'), driveConnect = $('driveConnect'), driveSetupDetails = $('driveSetupDetails');
+let menuOpen = false, driveLastFocus = null;
+
+function positionAppMenu(){
+  const r = menuToggle.getBoundingClientRect();
+  appMenu.style.top = Math.max(8, Math.min(window.innerHeight - appMenu.offsetHeight - 8, r.bottom + 7)) + 'px';
+  appMenu.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+}
+function setMenuOpen(on){
+  menuOpen = on;
+  appMenu.classList.toggle('hidden', !on);
+  menuToggle.setAttribute('aria-expanded', String(on));
+  if (on){ positionAppMenu(); updateDriveMenu(); }
+}
+menuToggle.onclick = () => setMenuOpen(!menuOpen);
+menuToggle.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowDown') return;
+  e.preventDefault(); setMenuOpen(true);
+  const first = appMenu.querySelector('[role=menuitem]:not(.hidden)'); if (first) first.focus();
+});
+window.addEventListener('resize', () => { if (menuOpen) positionAppMenu(); });
+document.addEventListener('pointerdown', e => {
+  if (menuOpen && !appMenu.contains(e.target) && !menuToggle.contains(e.target)) setMenuOpen(false);
+});
+appMenu.addEventListener('keydown', e => {
+  const entries = [...appMenu.querySelectorAll('[role=menuitem]:not(.hidden)')];
+  if (!entries.length) return;
+  const i = entries.indexOf(document.activeElement);
+  if (e.key === 'Escape'){ e.preventDefault(); setMenuOpen(false); menuToggle.focus(); }
+  else if (e.key === 'ArrowDown'){ e.preventDefault(); entries[(i + 1 + entries.length) % entries.length].focus(); }
+  else if (e.key === 'ArrowUp'){ e.preventDefault(); entries[(i - 1 + entries.length) % entries.length].focus(); }
+  else if (e.key === 'Home'){ e.preventDefault(); entries[0].focus(); }
+  else if (e.key === 'End'){ e.preventDefault(); entries[entries.length - 1].focus(); }
+});
+appMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setMenuOpen(false)));
+$('menuPickFiles').onclick = () => { setMenuOpen(false); $('fileInput').click(); };
+$('menuMetaBuild').onclick = () => { setMenuOpen(false); $('metaBuild').click(); };
+$('menuPresent').onclick = () => { setMenuOpen(false); $('presentBtn').click(); };
+
+function updateDriveMenu(){
+  const status = $('driveMenuStatus');
+  const configured = validateGoogleConfig(googleConfig.clientId, googleConfig.apiKey).valid;
+  if (hasGoogleToken()){
+    status.textContent = 'Google Drive connected for this tab.'; status.className = 'menu-status connected';
+  } else if (configured){
+    status.textContent = 'Google Drive configured; connect to choose a private file.'; status.className = 'menu-status';
+  } else {
+    status.textContent = 'Google Drive needs one-time deployment configuration.'; status.className = 'menu-status';
+  }
+  $('driveDisconnect').classList.toggle('hidden', !hasGoogleToken());
+}
+function setDriveStatus(message, kind=''){
+  driveStatus.textContent = message;
+  driveStatus.className = kind;
+}
+function driveTrapFocus(e){
+  const f = [...driveModal.querySelectorAll('button, input, a')].filter(el => !el.disabled && el.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+}
+function closeDriveModal(){
+  driveModal.classList.add('hidden'); driveModalOpen = false;
+  if (driveLastFocus && driveLastFocus.focus) driveLastFocus.focus();
+}
+async function openDriveModal(){
+  setMenuOpen(false);
+  driveLastFocus = document.activeElement;
+  driveClientId.value = googleConfig.clientId || '';
+  driveApiKey.value = googleConfig.apiKey || '';
+  driveConnect.disabled = true;
+  driveModal.classList.remove('hidden'); driveModalOpen = true;
+  const checked = validateGoogleConfig(driveClientId.value, driveApiKey.value);
+  driveSetupDetails.open = !checked.valid;
+  if (location.protocol === 'file:'){
+    setDriveStatus('Google authorization requires an http(s) origin. Serve this file locally or use the hosted app.', 'error');
+    driveClientId.focus(); return;
+  }
+  if (!checked.valid){ setDriveStatus('Enter the deployment credentials once, then save them.'); driveClientId.focus(); return; }
+  setDriveStatus('Loading Google Identity Services and the Drive Picker…');
+  try {
+    await prepareGoogleLibraries();
+    if (!driveModalOpen) return;
+    driveSetupDetails.open = false;
+    driveConnect.disabled = false;
+    setDriveStatus(hasGoogleToken() ? 'Drive is connected. Continue to choose a video.' : 'Ready. Continue to choose a Google Account and one video.', 'ready');
+    driveConnect.focus();
+  } catch(e){
+    if (driveModalOpen) setDriveStatus('Could not load Google authorization. Check the connection and try Save configuration again.', 'error');
+  }
+}
+$('driveOpen').onclick = () => {
+  if (hasGoogleToken() && googlePickerReady){ setMenuOpen(false); showGooglePicker(); }
+  else openDriveModal();
 };
+$('driveCancel').onclick = closeDriveModal;
+driveModal.addEventListener('click', e => { if (e.target === driveModal) closeDriveModal(); });
+
+function loadExternalScript(src, ready){
+  if (ready()) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => fail('timeout'), 15000);
+    const s = document.createElement('script'); s.src = src; s.async = true;
+    function fail(reason){ clearTimeout(timer); s.remove(); reject(new Error(reason)); }
+    s.onload = () => { clearTimeout(timer); ready() ? resolve() : fail('library unavailable'); };
+    s.onerror = () => fail('load failed');
+    document.head.appendChild(s);
+  });
+}
+async function prepareGoogleLibraries(){
+  const checked = validateGoogleConfig(googleConfig.clientId, googleConfig.apiKey);
+  if (!checked.valid) throw new Error(checked.error);
+  if (!googleLibrariesPromise){
+    googleLibrariesPromise = (async () => {
+      await Promise.all([
+        loadExternalScript('https://accounts.google.com/gsi/client', () => !!(window.google && google.accounts && google.accounts.oauth2)),
+        loadExternalScript('https://apis.google.com/js/api.js', () => !!window.gapi),
+      ]);
+      await new Promise((resolve, reject) => gapi.load('picker', {
+        callback: resolve, onerror: () => reject(new Error('picker load failed')),
+        timeout: 15000, ontimeout: () => reject(new Error('picker timeout')),
+      }));
+      googlePickerReady = true;
+    })().catch(e => { googleLibrariesPromise = null; googlePickerReady = false; throw e; });
+  }
+  await googleLibrariesPromise;
+  googleTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: checked.clientId,
+    scope: GOOGLE_DRIVE_SCOPE,
+    callback: handleGoogleToken,
+    error_callback: e => {
+      setDriveStatus(e && e.type === 'popup_closed' ? 'Google account selection was closed.' : 'Google authorization could not start.', 'error');
+    },
+  });
+}
+$('driveSave').onclick = async () => {
+  const checked = validateGoogleConfig(driveClientId.value, driveApiKey.value);
+  if (!checked.valid){ setDriveStatus(checked.error, 'error'); return; }
+  const changed = checked.clientId !== googleConfig.clientId || checked.apiKey !== googleConfig.apiKey;
+  if (changed) clearGoogleAuthorization(false);
+  persistGoogleConfig(checked);
+  googleTokenClient = null;
+  driveConnect.disabled = true;
+  setDriveStatus('Configuration saved. Loading Google authorization…');
+  try {
+    await prepareGoogleLibraries();
+    if (!driveModalOpen) return;
+    driveSetupDetails.open = false;
+    driveConnect.disabled = false; setDriveStatus('Ready. Continue to choose a Google Account and one video.', 'ready');
+    driveConnect.focus(); updateDriveMenu();
+  } catch(e){ setDriveStatus('Could not load Google authorization. Check the connection and try again.', 'error'); }
+};
+$('driveConnect').onclick = () => {
+  if (hasGoogleToken()){ closeDriveModal(); showGooglePicker(); return; }
+  if (!googleTokenClient){ setDriveStatus('Google authorization is not ready. Save the configuration and retry.', 'error'); return; }
+  setDriveStatus('Waiting for Google Account selection…');
+  googleTokenClient.requestAccessToken({ prompt: 'consent select_account' });
+};
+function handleGoogleToken(response){
+  if (!response || response.error || !response.access_token){
+    setDriveStatus('Google did not grant Drive access.', 'error'); return;
+  }
+  if (google.accounts.oauth2.hasGrantedAllScopes && !google.accounts.oauth2.hasGrantedAllScopes(response, GOOGLE_DRIVE_SCOPE)){
+    setDriveStatus('The selected-file Drive permission was not granted.', 'error'); return;
+  }
+  googleAccessToken = response.access_token;
+  googleTokenExpiresAt = Date.now() + Math.max(60, Number(response.expires_in) || 3600) * 1000 - 60000;
+  updateDriveMenu(); closeDriveModal(); showGooglePicker();
+}
+function showGooglePicker(){
+  if (!hasGoogleToken() || !googlePickerReady){ openDriveModal(); return; }
+  try {
+    const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+      .setIncludeFolders(false).setSelectFolderEnabled(false)
+      .setMimeTypes(GOOGLE_VIDEO_MIMES).setMode(google.picker.DocsViewMode.LIST);
+    let builder = new google.picker.PickerBuilder()
+      .addView(view).setOAuthToken(googleAccessToken)
+      .setDeveloperKey(googleConfig.apiKey).setAppId(googleConfig.appId)
+      .setCallback(handlePickerResult);
+    if (location.origin && location.origin !== 'null') builder = builder.setOrigin(location.origin);
+    builder.build().setVisible(true);
+  } catch(e){
+    console.warn('Google Picker failed', e);
+    setLoadStatus('Could not open the Google Drive Picker. Check the deployment configuration.', null, 'error');
+  }
+}
+function handlePickerResult(data){
+  if (!data || data.action !== google.picker.Action.PICKED) return;
+  const doc = data.docs && data.docs[0];
+  const result = addAuthenticatedDriveFile(doc);
+  if (!result.ok) setLoadStatus(result.error, null, 'error');
+}
+function addAuthenticatedDriveFile(doc){
+  if (!doc || !doc.id) return { ok: false, error: 'Google Drive did not return a file.' };
+  if (!(doc.mimeType || '').startsWith('video/')) return { ok: false, error: 'Choose a video file from Google Drive.' };
+  const size = Number(doc.sizeBytes) || 0;
+  if (size > MAX_BUFFER_BYTES) return { ok: false, error: 'This Drive video is larger than the 1 GB in-memory playback limit.' };
+  const filename = (doc.name || doc.id).slice(0, 160);
+  const name = baseSplit(filename).base || doc.id;
+  let idx = items.findIndex(it => it.type === 'gdrive-auth' && it.driveId === doc.id);
+  const item = {
+    key: 'gdrive-auth||' + doc.id, name, dir: 'my-drive', type: 'gdrive-auth', driveId: doc.id,
+    mimeType: doc.mimeType, sizeBytes: size, buffer: true,
+    mediaUrl: 'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(doc.id) + '?alt=media',
+    originalUrl: doc.url || ('https://drive.google.com/file/d/' + doc.id + '/view'),
+    video: null, vtt: null, meta: null, metaType: null,
+  };
+  if (idx < 0) items.push(item); else items[idx] = { ...items[idx], ...item };
+  items.sort((a,b)=> (a.dir+a.name).localeCompare(b.dir+b.name));
+  idx = items.findIndex(it => itemKey(it) === item.key);
+  load(idx);
+  return { ok: true, item };
+}
+function clearGoogleAuthorization(revoke=true){
+  const token = googleAccessToken;
+  googleAccessToken = null; googleTokenExpiresAt = 0;
+  if (revoke && token && window.google && google.accounts && google.accounts.oauth2){
+    try { google.accounts.oauth2.revoke(token, () => {}); } catch(e){}
+  }
+  if (activeIdx >= 0 && items[activeIdx].type === 'gdrive-auth'){
+    ++loadGeneration;
+    if (remoteController) remoteController.abort();
+    prepareHtmlVideo(); releaseObjectUrl(); setLoadStatus();
+    setPlaceholder('Google Drive disconnected. Reconnect from the menu to reopen this private video.', 'error');
+  }
+  updateDriveMenu();
+}
+$('driveDisconnect').onclick = () => { setMenuOpen(false); clearGoogleAuthorization(true); };
+updateDriveMenu();
+
+async function downloadRawHtml(){
+  setMenuOpen(false); setLoadStatus('Preparing the raw single-file app…');
+  const urls = [];
+  if (location.protocol === 'http:' || location.protocol === 'https:') urls.push(new URL('app.html', location.href).href);
+  if (!urls.includes(RAW_APP_URL)) urls.push(RAW_APP_URL);
+  let html = null, lastError = null;
+  for (const url of urls){
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error('server returned ' + response.status);
+      const candidate = await response.text();
+      if (!candidate.includes('<!DOCTYPE html>') || !candidate.includes('id="dirInput"')) throw new Error('response was not the app HTML');
+      html = candidate; break;
+    } catch(e){ lastError = e; }
+  }
+  if (html === null){ setLoadStatus('Could not download the raw HTML: ' + (lastError ? lastError.message : 'unknown error'), null, 'error'); return; }
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+  const a = document.createElement('a'); a.href = url; a.download = 'video-subtitle-overlay.html';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setLoadStatus('Raw HTML downloaded.', 100); setTimeout(() => setLoadStatus(), 1400);
+}
+$('downloadHtml').onclick = downloadRawHtml;
 
 const setLbl = (id, text) => { $(id).querySelector('.lbl').textContent = text; };
 
@@ -781,10 +1608,16 @@ function applySubBg(){
 }
 
 /* ---------- overlay scale & drag positions ---------- */
-let uiScale = 1;
+let uiScale = 1, adaptiveScale = true, stageScale = 1;
 let overlayPos = { meta: null, clock: null, subs: null };
 let movingOn = false;
-function applyScale(){ document.documentElement.style.setProperty('--ui-scale', uiScale); }
+function applyScale(){
+  const r = stageDiv.getBoundingClientRect();
+  const fit = r.width > 0 && r.height > 0 ? Math.min(r.width / 960, r.height / 540) : 1;
+  stageScale = adaptiveScale ? Math.max(0.62, Math.min(1.35, fit)) : 1;
+  const effective = Math.round(uiScale * stageScale * 1000) / 1000;
+  document.documentElement.style.setProperty('--effective-scale', effective);
+}
 function applyPos(el, key){
   const p = overlayPos[key];
   if (p){ el.style.left = p.l + '%'; el.style.top = p.t + '%'; el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.transform = 'none'; }
@@ -800,7 +1633,7 @@ function saveSettings(){
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
       showMeta, showSubs, showClock,
       subTop: subsEl.classList.contains('top'),
-      subBg: subBgIdx, uiScale, pos: overlayPos,
+      subBg: subBgIdx, uiScale, adaptiveScale, pos: overlayPos,
       subSize: cssPx('--sub-size'), metaSize: cssPx('--meta-size'),
     }));
   } catch(e){ /* storage unavailable — ignore */ }
@@ -821,6 +1654,7 @@ function loadSettings(){
   if (typeof s.subBg === 'number' && SUB_BG[s.subBg]) subBgIdx = s.subBg;
   const us = num(s.uiScale, 0.5, 2.5);
   if (us) uiScale = us;
+  if (typeof s.adaptiveScale === 'boolean') adaptiveScale = s.adaptiveScale;
   const pos = k => {
     const p = s.pos && s.pos[k];
     const l = num(p && p.l, 0, 100), t = num(p && p.t, 0, 100);
@@ -831,9 +1665,12 @@ function loadSettings(){
   setLbl('subToggle',  'Subs: ' + (showSubs ? 'on' : 'off'));
   setLbl('clockToggle','Time: ' + (showClock ? 'on' : 'off'));
   setLbl('subPos',     'Subs: ' + (subsEl.classList.contains('top') ? 'top' : 'bottom'));
+  setLbl('fitToggle',  'Auto size: ' + (adaptiveScale ? 'on' : 'off'));
   applySubBg(); applyScale(); applyAllPos();
 }
 loadSettings();
+applyScale();
+if ('ResizeObserver' in window) new ResizeObserver(() => applyScale()).observe(stageDiv);
 
 $('metaToggle').onclick = () => {
   showMeta = !showMeta;
@@ -856,8 +1693,30 @@ $('clockToggle').onclick = () => {
 
 video.addEventListener('error', () => {
   if (!video.currentSrc) return;
-  placeholder.textContent = 'Cannot play this file in Chrome (unsupported codec/format). Use MP4/H.264 or WebM.';
-  placeholder.classList.remove('hidden');
+  setLoadStatus();
+  const it = items[activeIdx];
+  if (it && it.type === 'gdrive'){
+    setPlaceholder(
+      'Google Drive did not return playable video data. Confirm the file is an MP4 shared as “Anyone with the link” and that viewers may download it.',
+      'error', { href: it.originalUrl, label: 'Open the file in Google Drive' }
+    );
+  } else if (it && it.type === 'gdrive-auth'){
+    setPlaceholder('Chrome could not decode the selected Drive file. Use an MP4/H.264 or WebM video and choose it again from the menu.', 'error');
+  } else if (it && it.type === 'remote'){
+    setPlaceholder('This remote URL did not return a browser-playable video. Check its access permissions, codec, and cross-site restrictions.', 'error',
+      { href: it.originalUrl, label: 'Open the original URL' });
+  } else {
+    setPlaceholder('Cannot play this file in Chrome (unsupported codec/format). Use MP4/H.264 or WebM.', 'error');
+  }
+});
+video.addEventListener('loadedmetadata', () => { hidePlaceholder(); if (!bufferingRemote) setLoadStatus(); });
+video.addEventListener('canplay', () => { hidePlaceholder(); if (!bufferingRemote) setLoadStatus(); });
+video.addEventListener('playing', () => { hidePlaceholder(); setLoadStatus(); });
+video.addEventListener('waiting', () => {
+  if (!bufferingRemote && activeIdx >= 0 && !isYt()) setLoadStatus('Playback is buffering…');
+});
+video.addEventListener('stalled', () => {
+  if (!bufferingRemote && activeIdx >= 0 && !isYt()) setLoadStatus('The connection stalled. The browser is retrying…', null, 'error');
 });
 function setSize(varName, d, min, max){
   const cur = parseInt(getComputedStyle(document.documentElement).getPropertyValue(varName)) || min;
@@ -870,7 +1729,7 @@ $('subPlus').onclick  = () => setSubSize(4);
 $('subMinus').onclick = () => setSubSize(-4);
 $('metaPlus').onclick  = () => setMetaSize(2);
 $('metaMinus').onclick = () => setMetaSize(-2);
-$('presentBtn').onclick = () => document.body.classList.toggle('present');
+$('presentBtn').onclick = () => { document.body.classList.toggle('present'); requestAnimationFrame(applyScale); };
 $('subPos').onclick = () => {
   overlayPos.subs = null; applyPos(subsEl, 'subs');
   const top = subsEl.classList.toggle('top');
@@ -884,9 +1743,13 @@ $('subBg').onclick = () => {
 };
 $('uiPlus').onclick  = () => { uiScale = Math.min(2.5, Math.round((uiScale + 0.1) * 10) / 10); applyScale(); saveSettings(); };
 $('uiMinus').onclick = () => { uiScale = Math.max(0.5, Math.round((uiScale - 0.1) * 10) / 10); applyScale(); saveSettings(); };
+$('fitToggle').onclick = () => {
+  adaptiveScale = !adaptiveScale;
+  setLbl('fitToggle', 'Auto size: ' + (adaptiveScale ? 'on' : 'off'));
+  applyScale(); saveSettings();
+};
 
 /* ---------- move / drag overlays ---------- */
-const stageDiv = document.querySelector('.stage');
 function setMoving(on){
   movingOn = on;
   stageDiv.classList.toggle('moving', on);
@@ -936,6 +1799,19 @@ function togglePlay(){
 }
 
 document.addEventListener('keydown', e => {
+  if (driveModalOpen){
+    if (e.key === 'Escape') closeDriveModal();
+    else if (e.key === 'Tab') driveTrapFocus(e);
+    return;
+  }
+  if (sourceOpen){
+    if (e.key === 'Escape') closeSource();
+    else if (e.key === 'Tab') sourceTrapFocus(e);
+    return;
+  }
+  if (menuOpen && e.key === 'Escape'){
+    e.preventDefault(); setMenuOpen(false); menuToggle.focus(); return;
+  }
   if (mbOpen){
     if (e.key === 'Escape') closeMb();
     else if (e.key === 'Tab') mbTrapFocus(e);
@@ -959,6 +1835,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'ArrowRight' && e.shiftKey && activeIdx < items.length-1) load(activeIdx+1);
   else if (e.key === 'ArrowLeft' && e.shiftKey && activeIdx > 0) load(activeIdx-1);
 });
+$('stage').addEventListener('click', () => setLibraryOpen(false));
 
 /* ---------- drag & drop (files or whole folders) ---------- */
 ['dragover','drop'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
@@ -991,11 +1868,11 @@ document.addEventListener('drop', async e => {
     }
   }
   if (e.dataTransfer.files.length){ addFiles(e.dataTransfer.files); return; }
-  // a YouTube URL dragged onto the page (uri-list can be multi-line with # comments)
+  // a supported URL dragged onto the page (uri-list can be multi-line with # comments)
   const raw = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text');
   const link = (raw || '').split('\n').find(l => l.trim() && !l.startsWith('#'));
-  const id = parseYouTubeId(link);
-  if (id) addYouTube(id);
+  const source = parseMediaSource(link);
+  if (source) addParsedSource(source, false);
 });
 
 /* ---------- metadata builder ---------- */

@@ -42,6 +42,65 @@ def test_parse_youtube_id(app, text, expected):
     assert app.evaluate("t => parseYouTubeId(t)", text) == expected
 
 
+@pytest.mark.parametrize("text,expected", [
+    ("https://drive.google.com/file/d/1AbC_defGhijkLMNopQr/view?usp=sharing", "1AbC_defGhijkLMNopQr"),
+    ("https://drive.google.com/open?id=1AbC_defGhijkLMNopQr", "1AbC_defGhijkLMNopQr"),
+    ("https://drive.google.com/uc?export=download&id=1AbC_defGhijkLMNopQr", "1AbC_defGhijkLMNopQr"),
+    ("https://drive.usercontent.google.com/download?id=1AbC_defGhijkLMNopQr&export=download", "1AbC_defGhijkLMNopQr"),
+    ("https://drive.google.com/drive/folders/1AbC_defGhijkLMNopQr", None),
+    ("https://example.com/file/d/1AbC_defGhijkLMNopQr/view", None),
+    ("not-a-drive-link", None),
+])
+def test_parse_google_drive_id(app, text, expected):
+    assert app.evaluate("t => parseGoogleDriveId(t)", text) == expected
+
+
+def test_parse_media_source_variants(app):
+    drive = app.evaluate("t => parseMediaSource(t)",
+                         "https://drive.google.com/file/d/1AbC_defGhijkLMNopQr/view")
+    assert drive == {
+        "type": "gdrive",
+        "id": "1AbC_defGhijkLMNopQr",
+        "mediaUrl": "https://drive.usercontent.google.com/download?id=1AbC_defGhijkLMNopQr&export=download&confirm=t",
+        "originalUrl": "https://drive.google.com/file/d/1AbC_defGhijkLMNopQr/view",
+    }
+
+    remote = app.evaluate("t => parseMediaSource(t)",
+                          "https://cdn.example.com/path/My%20Lecture.mp4?token=abc")
+    assert remote["type"] == "remote"
+    assert remote["url"].startswith("https://cdn.example.com/path/My%20Lecture.mp4")
+    assert remote["name"] == "My Lecture"
+
+    assert app.evaluate("t => parseMediaSource(t)", "javascript:alert(1)") is None
+    assert app.evaluate("t => parseMediaSource(t)",
+                        "https://drive.google.com/drive/folders/1AbC_defGhijkLMNopQr") is None
+
+
+@pytest.mark.parametrize("size,expected", [
+    (0, "0 B"),
+    (1024, "1.0 KB"),
+    (5 * 1024 * 1024, "5.0 MB"),
+    (2 * 1024 * 1024 * 1024, "2.0 GB"),
+])
+def test_format_bytes(app, size, expected):
+    assert app.evaluate("n => formatBytes(n)", size) == expected
+
+
+def test_google_browser_config_validation(app):
+    valid = app.evaluate("([c,k]) => validateGoogleConfig(c,k)", [
+        "123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
+        "AIza" + "A" * 35,
+    ])
+    assert valid == {
+        "valid": True,
+        "clientId": "123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
+        "apiKey": "AIza" + "A" * 35,
+        "appId": "123456789012",
+    }
+    assert app.evaluate("() => validateGoogleConfig('bad', 'bad').valid") is False
+    assert "OAuth web client" in app.evaluate("() => validateGoogleConfig('bad', 'bad').error")
+
+
 def test_parse_vtt_basic(app):
     cues = app.evaluate("t => parseVTT(t)",
         "WEBVTT\n\n00:01.000 --> 00:02.500\nHello\nworld\n\n00:03.000 --> 00:04.000\nBye\n")

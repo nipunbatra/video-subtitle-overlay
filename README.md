@@ -23,12 +23,14 @@ https://github.com/nipunbatra/video-subtitle-overlay/raw/main/demo/demo-lecture.
 ## Features
 
 - **Auto-matched files** — pick a folder; each video finds its same-named `.vtt`/`.srt` subtitles and `.json`/`.txt` metadata.
-- **YouTube links too** — paste a link (or drag one onto the page); the video plays in an embedded player with the same overlays drawn on top.
+- **Local and linked video sources** — play local files, YouTube links, public or privately selected Google Drive videos, and direct HTTP(S) video URLs.
+- **Safer remote playback** — stream with browser preloading, or explicitly buffer the full remote file in memory before playback; blocked full-buffer requests fall back to streaming.
 - **Constant metadata overlay** — title, date, or any fields stay on screen for the whole clip.
 - **Synced subtitles** — custom WebVTT/SRT renderer, resizable and repositionable for a shared screen.
 - **Live timecode** — always-visible `current / duration` readout.
+- **Responsive overlays** — metadata, subtitles, and the timer adapt to the actual video area while retaining manual size controls.
 - **Presentation mode** — one key hides the UI so the video fills the tab.
-- **100% local & private** — no uploads, no server, no dependencies. *(YouTube items naturally stream from YouTube — everything else stays on your machine.)*
+- **Local-file privacy** — selected files stay in your browser and are never uploaded. Linked videos naturally connect to their source host.
 
 ## Usage
 
@@ -55,16 +57,60 @@ A plain `talk.txt` is shown verbatim.
 
 > **Don't want to hand-write JSON?** Click **✎ New metadata** in the app — add fields with a live preview, then download a ready-to-use `.json` (named to match your video) or apply it to the current clip instantly.
 
-### YouTube links
+### Linked videos
 
-Click **▶ YouTube link** and paste a URL — or just drag one from the address bar onto the page. The video plays in an embedded YouTube player with the same subtitle/metadata/timecode overlays drawn on top, so they still show up in a shared tab.
+Click **＋ Add link** and paste any of these — or drag a supported URL onto the page:
 
-A YouTube item's *base name* is its **video ID**, so the usual same-name matching applies:
+- a YouTube URL or 11-character video ID;
+- a Google Drive **file** link;
+- a direct `http://` or `https://` video URL, including signed URLs with query parameters.
 
-- **Metadata** — easiest: **✎ New metadata → Apply to current** (and **Download .json** to keep it for next time). Or add a `<video-id>.json` (e.g. `dQw4w9WgXcQ.json`) via **Pick files** / drag & drop.
-- **Subtitles** — add a `<video-id>.vtt` the same way. (YouTube's own captions aren't accessible from an embed, so bring your own `.vtt`.)
+Google Drive and direct links use the native HTML video player, so custom subtitles, metadata, the timecode, seeking, and keyboard playback controls work the same way as with a local file. YouTube uses its official embedded player with the overlays drawn above it.
 
-Notes:
+#### Google Drive files
+
+1. Upload an ordinary video file such as MP4/H.264 (a Google Vids project itself is not a video blob).
+2. Set **General access → Anyone with the link → Viewer**.
+3. Make sure viewers are allowed to download the file.
+4. Paste the `/file/d/…/view` sharing link into **＋ Add link**.
+
+Drive folder links are intentionally rejected: add the individual video file link. Organization policies, disabled downloads, private files, and Drive quota/rate limits can prevent browser playback; the app then shows a link back to the original Drive file.
+
+#### Private Google Drive setup
+
+Private Drive access uses **Sign in with Google**, the official Google Picker, and the narrow `drive.file` scope. The user chooses one file in Google's UI; the app does not request Gmail access or permission to list the whole Drive. Access tokens remain in memory and disappear on reload. **Menu → Disconnect Google Drive** revokes the grant.
+
+The hosted app is already configured with the same public, origin-restricted Web OAuth client and Picker API key used by [`video-trim-metadata-store`](https://github.com/nipunbatra/video-trim-metadata-store). These are browser identifiers, not secrets. Its client secret and reusable tokens are **not** copied. On the hosted app the normal flow is simply **Menu → Open from Google Drive → Continue with Google**.
+
+A fork on a different web origin needs one-time Google Cloud configuration:
+
+1. Create or select a Google Cloud project.
+2. Enable both the **Google Drive API** and **Google Picker API**.
+3. Configure the Google Auth consent screen and add this repo's [`privacy.html`](privacy.html) URL.
+4. Create an **OAuth client ID → Web application**. Add the exact app origins under **Authorized JavaScript origins**, for example:
+   - `https://nipunbatra.github.io`
+   - `http://localhost:8000` for local development
+5. Create a browser API key, restrict it to the same website origins, and restrict its API access to **Google Picker API**.
+6. Expand **Site-owner setup** in the Drive dialog, enter the OAuth client ID and API key, then save. These are public browser identifiers—not secrets—and are stored in that browser's local storage.
+
+For a fixed deployment, place the public values in `BUILTIN_GOOGLE_CONFIG` in [`app.html`](app.html). Never put a client secret, access token, refresh token, `oauth_credentials.json`, or token pickle into this repository. In particular, the desktop credentials from `video-process` cannot be reused by this static web app; they use a different OAuth client type and contain secret/refreshable material.
+
+Private Drive playback uses `files.get?alt=media` with the short-lived access token. Since a native `<video>` request cannot attach that OAuth header, the selected file is fully buffered into a temporary browser blob before playback. The same 1 GB guard applies; larger private videos should be downloaded locally first.
+
+#### Buffering remote video
+
+Remote links stream with `preload="auto"` by default, so the browser buffers ahead without waiting for the entire file. For a fragile connection, enable **Buffer the full remote file before playing** in the link dialog. The app downloads into a temporary in-memory blob, reports progress, caps the allocation at 1 GB, and aborts it if you switch videos.
+
+Full buffering requires the remote host to allow cross-origin browser downloads (CORS). If it does not, the app explains why and falls back to ordinary streaming. YouTube controls its own buffering. Buffered blobs disappear when the tab closes or another source replaces them.
+
+#### Matching sidecars to linked video
+
+A linked video's *base name* is its **YouTube/Drive ID** or the direct URL's filename, so the usual same-name matching applies:
+
+- **Metadata** — easiest: **✎ New metadata → Apply to current** (and **Download .json** to keep it for next time). Or add a same-named `.json` via **Pick files** / drag & drop.
+- **Subtitles** — add a same-named `.vtt` or `.srt`. YouTube's own captions aren't accessible from an embed, so bring your own sidecar.
+
+YouTube notes:
 
 - Works on the **[hosted app](https://nipunbatra.github.io/video-subtitle-overlay/app.html)** or any http-served copy. YouTube refuses to play inside a page opened as a **local file** (`file://` sends no referrer → YouTube error 153) — if you downloaded `app.html`, serve it first: `python3 -m http.server`, then open `http://localhost:8000/app.html`. Local videos are unaffected either way.
 - Videos whose owner disabled embedding won't play (YouTube error 150/101).
@@ -97,7 +143,7 @@ Then:
 
 ## Run locally — just download one file
 
-There's nothing to install and **nothing is ever uploaded** — your videos stay on your machine. The whole app is the single file [`app.html`](https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html). Download it, open it in Chrome, done.
+There's nothing to install. Local files are not uploaded; remote links connect only to the host you supplied. The whole app is the single file [`app.html`](https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html). Download it from **Menu → Download raw HTML**, or use the commands below.
 
 **1. Download `app.html`**
 
@@ -117,20 +163,18 @@ There's nothing to install and **nothing is ever uploaded** — your videos stay
 - **Linux:** `google-chrome app.html`  *(or `xdg-open app.html`)*
 - **Windows:** `start chrome app.html`  *(or just double-click the file)*
 
-> A Chromium browser (Chrome, Edge, Brave) is recommended — **Pick folder** and **"share tab audio"** work best there.
+> A Chromium browser (Chrome, Edge, Brave) is recommended — **Pick folder** and **"share tab audio"** work best there. Google authorization requires an HTTP(S) origin, so use the hosted app or serve the downloaded file with `python3 -m http.server`; it cannot run from `file://`.
 
 Then point the app at a folder of videos (see [Usage](#usage)). It all runs inside the browser tab: no server, no sign-up, no upload.
 
-*Developers:* you can still `git clone` the repo if you want the source, demo files and tests. The test suite (pytest + Playwright driving your installed Chrome, YouTube API mocked) runs with:
+*Developers:* you can still `git clone` the repo if you want the source, demo files and tests. The test suite (pytest + Playwright driving your installed Chrome, with YouTube and remote media mocked) runs with:
 
 ```bash
-uv run --with pytest --with playwright pytest tests/ -q          # full suite
-uv run --with pytest --with playwright pytest tests/ -q --live   # + real YouTube embed
+uv run --with-requirements requirements-dev.txt pytest tests/ -q          # full suite
+uv run --with-requirements requirements-dev.txt pytest tests/ -q --live   # + real YouTube embed
 ```
 
-## Roadmap
-
-- **Open from Google Drive** — point the app at a shared Drive folder instead of a local one, so the same videos/subtitles/metadata can be played without downloading them first. *(Planned — today everything is strictly local.)*
+See the [privacy policy](privacy.html) for the exact Google user-data handling and retention behavior.
 
 ## License
 
