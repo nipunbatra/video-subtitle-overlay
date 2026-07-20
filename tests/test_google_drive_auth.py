@@ -25,10 +25,6 @@ def open_drive_dialog(page):
 def configure(page):
     open_drive_dialog(page)
     page.wait_for_function("!driveConnect.disabled")
-    page.locator("#driveSetupDetails").evaluate("el => el.open = true")
-    page.fill("#driveClientId", CLIENT_ID)
-    page.click("#driveSave")
-    page.wait_for_function("!driveConnect.disabled")
 
 
 def fulfill_listing(route, files=None, next_page=None, status=200):
@@ -91,9 +87,9 @@ def test_private_drive_browser_uses_readonly_scope_and_authenticated_buffer(app)
     assert app.locator("#list .tag.drive").text_content() == "my drive"
     assert app.locator("#list .tag.buffer").text_content() == "full buffer"
 
-    # The public client ID may persist; access tokens and API keys never do.
-    stored = app.evaluate("localStorage.getItem('vso-google-config-v2')")
-    assert CLIENT_ID in stored
+    # OAuth configuration, access tokens, and API keys never persist in storage.
+    assert app.evaluate("localStorage.getItem('vso-google-config-v2')") is None
+    assert app.evaluate("localStorage.getItem('vso-google-config-v1')") is None
     all_storage = app.evaluate("JSON.stringify({...localStorage})")
     assert "test-access-token" not in all_storage
     assert "AIza" not in all_storage
@@ -141,50 +137,38 @@ def test_drive_listing_auth_failure_closes_browser_and_clears_token(app):
     assert app.evaluate("googleAccessToken") is None
 
 
-def test_invalid_oauth_configuration_is_inline_and_does_not_reload_google(app):
-    open_drive_dialog(app)
-    app.wait_for_function("!driveConnect.disabled")
-    app.locator("#driveSetupDetails").evaluate("el => el.open = true")
-    initial_loads = app.evaluate("__googleLog.length")
-    app.fill("#driveClientId", "not-a-client")
-    app.click("#driveSave")
-    assert "valid OAuth" in app.text_content("#driveStatus")
-    assert app.locator("#driveStatus").evaluate("el => el.classList.contains('error')")
-    assert app.evaluate("__googleLog.length") == initial_loads
-
-
 def test_hosted_config_is_ready_without_visitor_configuration_or_api_key(app):
     open_drive_dialog(app)
     app.wait_for_function("!driveConnect.disabled")
-    assert not app.locator("#driveSetupDetails").evaluate("el => el.open")
-    assert app.input_value("#driveClientId").startswith("754571415429-")
+    assert app.locator("#driveSetupDetails").count() == 0
+    assert app.locator("#driveClientId").count() == 0
     assert app.locator("#driveApiKey").count() == 0
     assert app.evaluate("localStorage.getItem('vso-google-config-v2')") is None
+    assert app.evaluate("__lastTokenConfig.client_id").startswith("754571415429-")
     assert "Ready" in app.text_content("#driveStatus")
 
 
-def test_retired_picker_configuration_migrates_client_id_and_purges_key(app):
-    app.evaluate("""([clientId, retiredKey]) => localStorage.setItem(
-        'vso-google-config-v1',
-        JSON.stringify({clientId, apiKey: retiredKey, accessToken: 'must-not-survive'})
-    )""", [CLIENT_ID, "AI" + "za" + "A" * 35])
+def test_retired_picker_configuration_is_fully_purged(app):
+    app.evaluate("""([clientId, retiredKey]) => {
+        localStorage.setItem('vso-google-config-v1', JSON.stringify({
+            clientId, apiKey: retiredKey, accessToken: 'must-not-survive'
+        }));
+        localStorage.setItem('vso-google-config-v2', JSON.stringify({clientId}));
+    }""", [CLIENT_ID, "AI" + "za" + "A" * 35])
     app.reload()
     assert app.evaluate("localStorage.getItem('vso-google-config-v1')") is None
-    stored = json.loads(app.evaluate("localStorage.getItem('vso-google-config-v2')"))
-    assert stored == {"clientId": CLIENT_ID}
+    assert app.evaluate("localStorage.getItem('vso-google-config-v2')") is None
     assert "must-not-survive" not in app.evaluate("JSON.stringify({...localStorage})")
-
-
-def test_deployment_setup_collapses_after_valid_configuration(app):
-    configure(app)
-    assert not app.locator("#driveSetupDetails").evaluate("el => el.open")
-    assert "Continue with Google" in app.text_content("#driveConnect")
+    open_drive_dialog(app)
+    app.wait_for_function("!driveConnect.disabled")
+    assert app.evaluate("__lastTokenConfig.client_id").startswith("754571415429-")
 
 
 def test_browser_filters_non_video_and_blocks_oversized_before_fetch(app):
     files = [
         {"id": "folder01", "name": "Lectures", "mimeType": "application/vnd.google-apps.folder"},
         {"id": "doc01", "name": "Notes.pdf", "mimeType": "application/pdf", "size": "10"},
+        {"id": "safe01", "name": "<img src=x onerror=alert(1)>.mp4", "mimeType": "video/mp4", "size": "10"},
         {"id": "huge01", "name": "Huge.mp4", "mimeType": "video/mp4", "size": "1073741825"},
     ]
     media_requests = []
@@ -193,6 +177,8 @@ def test_browser_filters_non_video_and_blocks_oversized_before_fetch(app):
 
     assert app.locator(".drive-entry", has_text="Lectures").count() == 1
     assert app.locator(".drive-entry", has_text="Notes.pdf").count() == 0
+    assert app.locator("#driveBrowserList img").count() == 0
+    assert app.locator(".drive-entry", has_text="<img src=x").count() == 1
     huge = app.locator(".drive-entry", has_text="Huge.mp4")
     assert huge.is_disabled()
     assert "Over 1 GB" in huge.text_content()
@@ -244,16 +230,24 @@ def test_google_script_failure_can_retry(page, http_root):
     page.unroute("https://accounts.google.com/gsi/client")
     page.route("https://accounts.google.com/gsi/client", lambda route: route.fulfill(
         content_type="application/javascript", body=FAKE_GOOGLE))
-    page.locator("#driveSetupDetails").evaluate("el => el.open = true")
-    page.click("#driveSave")
+    assert page.locator("#driveRetry").is_visible()
+    page.click("#driveRetry")
     page.wait_for_function("!driveConnect.disabled")
+
+
+def test_drive_browser_closes_with_escape(app):
+    connect_and_browse(app)
+    app.keyboard.press("Escape")
+    assert not app.evaluate("driveBrowserOpen")
+    assert app.locator("#driveBrowserModal").evaluate("el => el.classList.contains('hidden')")
 
 
 def test_file_protocol_explains_google_origin_requirement(page):
     page.goto((REPO / "app.html").as_uri())
     open_drive_dialog(page)
-    assert "http(s) origin" in page.text_content("#driveStatus")
+    assert "hosted app or http://localhost:5173" in page.text_content("#driveStatus")
     assert page.locator("#driveConnect").is_disabled()
+    assert page.locator("#driveClientId").count() == 0
 
 
 def test_download_raw_html_from_menu(app):
@@ -261,7 +255,7 @@ def test_download_raw_html_from_menu(app):
     with app.expect_download() as info:
         app.click("#downloadHtml")
     download = info.value
-    assert download.suggested_filename == "video-subtitle-overlay.html"
+    assert download.suggested_filename == "framecue.html"
     html = pathlib.Path(download.path()).read_text()
     assert "<!DOCTYPE html>" in html
     assert 'id="dirInput"' in html

@@ -1,9 +1,11 @@
-# 🎬 Video Subtitle Overlay
+# FrameCue
 
-Play a local video with **synced subtitles** and a **constant metadata overlay**, all rendered
+Play local or linked video with **synced subtitles**, **responsive timecode**, and a **constant metadata overlay**, all rendered
 inside a single self-contained HTML file. Built for **sharing a Chrome tab** over Google Meet,
 Zoom, or any screen share — because the subtitles and metadata are drawn into the page, they
 show up in the shared view (unlike OS-level captions or a separate window).
+
+FrameCue is the playback companion to **[FrameCut](https://nipunbatra.github.io/video-trim-metadata-store/)**, which trims Drive videos and saves metadata sidecars.
 
 **▶️ Live app:** https://nipunbatra.github.io/video-subtitle-overlay/app.html
 **📖 Docs:** https://nipunbatra.github.io/video-subtitle-overlay/
@@ -76,11 +78,11 @@ Google Drive and direct links use the native HTML video player, so custom subtit
 
 Drive folder links are intentionally rejected: add the individual video file link. Organization policies, disabled downloads, private files, and Drive quota/rate limits can prevent browser playback; the app then shows a link back to the original Drive file.
 
-#### Private Google Drive setup
+#### Private Google Drive
 
 Private Drive access uses **Sign in with Google**, the Drive REST API, and the read-only `drive.readonly` scope. The app can list Drive file names and folders so you can browse to a video, and it can download the video you select. It cannot upload, edit, share, or delete Drive files and does not request Gmail access. Access tokens remain in memory and disappear on reload. **Menu → Disconnect Google Drive** revokes the grant.
 
-The hosted app is already configured with the same public, origin-restricted Web OAuth client used by [`video-trim-metadata-store`](https://github.com/nipunbatra/video-trim-metadata-store). This browser client ID is not a secret. Its client secret and reusable tokens are **not** copied, and no API key is required. On the hosted app the normal flow is simply **Menu → Open from Google Drive → Continue with Google**.
+The hosted app is already configured with the same public, origin-restricted Web OAuth client used by [FrameCut](https://github.com/nipunbatra/video-trim-metadata-store). No API key is required, and visitors never need to enter an OAuth identifier. The normal flow is simply **Menu → Open from Google Drive → Continue with Google**.
 
 A fork on a different web origin needs one-time Google Cloud configuration:
 
@@ -89,10 +91,10 @@ A fork on a different web origin needs one-time Google Cloud configuration:
 3. Configure the Google Auth consent screen and add this repo's [`privacy.html`](privacy.html) URL.
 4. Create an **OAuth client ID → Web application**. Add the exact app origins under **Authorized JavaScript origins**, for example:
    - `https://nipunbatra.github.io`
-   - `http://localhost:8000` for local development
-5. Expand **Site-owner setup** in the Drive dialog, enter the OAuth client ID, then save. This public browser identifier—not a secret—is stored in that browser's local storage.
+   - `http://localhost:5173` for local development
+5. Replace `GOOGLE_OAUTH_CLIENT_ID` in [`app.html`](app.html) with that deployment's public Web client ID.
 
-For a fixed deployment, place the public client ID in `BUILTIN_GOOGLE_CONFIG` in [`app.html`](app.html). Never put a client secret, access token, refresh token, `oauth_credentials.json`, or token pickle into this repository. In particular, the desktop credentials from `video-process` cannot be reused by this static web app; they use a different OAuth client type and contain secret/refreshable material.
+The client ID is public and must be present in browser source, but it should remain origin-restricted in Google Cloud. Never put a client secret, API key, access token, refresh token, `oauth_credentials.json`, or token pickle into this repository. In particular, the desktop credentials from `video-process` cannot be reused by this static web app; they use a different OAuth client type and contain secret/refreshable material.
 
 The in-app browser uses read-only `files.list` requests and filters the result to folders and video files. Playback uses `files.get?alt=media` with the short-lived access token. Since a native `<video>` request cannot attach that OAuth header, the selected file is fully buffered into a temporary browser blob before playback. The same 1 GB guard applies; larger private videos should be downloaded locally first.
 
@@ -111,7 +113,7 @@ A linked video's *base name* is its **YouTube/Drive ID** or the direct URL's fil
 
 YouTube notes:
 
-- Works on the **[hosted app](https://nipunbatra.github.io/video-subtitle-overlay/app.html)** or any http-served copy. YouTube refuses to play inside a page opened as a **local file** (`file://` sends no referrer → YouTube error 153) — if you downloaded `app.html`, serve it first: `python3 -m http.server`, then open `http://localhost:8000/app.html`. Local videos are unaffected either way.
+- Works on the **[hosted app](https://nipunbatra.github.io/video-subtitle-overlay/app.html)** or any http-served copy. YouTube refuses to play inside a page opened as a **local file** (`file://` sends no referrer → YouTube error 153) — if you downloaded `app.html`, serve it first: `python3 -m http.server 5173`, then open `http://localhost:5173/app.html`. Local videos are unaffected either way.
 - Videos whose owner disabled embedding won't play (YouTube error 150/101).
 - Keyboard shortcuts work while the embedded player isn't focused.
 
@@ -162,7 +164,7 @@ There's nothing to install. Local files are not uploaded; remote links connect o
 - **Linux:** `google-chrome app.html`  *(or `xdg-open app.html`)*
 - **Windows:** `start chrome app.html`  *(or just double-click the file)*
 
-> A Chromium browser (Chrome, Edge, Brave) is recommended — **Pick folder** and **"share tab audio"** work best there. Google authorization requires an HTTP(S) origin, so use the hosted app or serve the downloaded file with `python3 -m http.server`; it cannot run from `file://`.
+> A Chromium browser (Chrome, Edge, Brave) is recommended — **Pick folder** and **"share tab audio"** work best there. Google authorization requires an authorized HTTP(S) origin, so use the hosted app or serve the downloaded file with `python3 -m http.server 5173`; it cannot run from `file://`.
 
 Then point the app at a folder of videos (see [Usage](#usage)). It all runs inside the browser tab: no server, no sign-up, no upload.
 
