@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Privacy policy for Video Subtitle Overlay, including Google Drive data handling.">
+<meta name="description" content="Privacy policy for FrameCue, including Google Drive data handling.">
 <meta name="theme-color" content="#12151b">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23171a20'/%3E%3Cpath d='M13 23h38v28H13z' fill='%236e9eea'/%3E%3Cpath d='m13 23 7-10h10l-7 10m10 0 7-10h11l-7 10' fill='none' stroke='%23edf0f5' stroke-width='5'/%3E%3Cpath d='m28 31 13 7-13 7z' fill='%2307101d'/%3E%3C/svg%3E">
-<title>Privacy — Video Subtitle Overlay</title>
+<title>Privacy — FrameCue</title>
 <style>
   :root { --bg:#0e0f13; --panel:#171a20; --line:#2a303b; --accent:#82adf0; --text:#edf0f5; --muted:#9ba4b3; }
   * { box-sizing: border-box; }
@@ -26,11 +26,11 @@
 </style>
 </head>
 <body>
-<header><div><b>Video Subtitle Overlay</b><a href="app.html">Back to app</a></div></header>
+<header><div><b>FrameCue</b><a href="app.html">Back to app</a></div></header>
 <main>
   <h1>Privacy</h1>
   <p class="updated">Last updated: 20 July 2026</p>
-  <p class="lede">Video Subtitle Overlay is a static, open-source browser app. It has no application server, account database, analytics, advertising, or telemetry.</p>
+  <p class="lede">FrameCue is a static, open-source browser app. It has no application server, account database, analytics, advertising, or telemetry.</p>
 
   <div class="notice"><b>Google access is read-only.</b> The app requests the <code>drive.readonly</code> scope through Google Identity Services. It can list Drive file names and folders and download the video you choose, but it cannot upload, edit, share, or delete Drive files and does not request Gmail access.</div>
 
@@ -39,7 +39,6 @@
     <li><b>Local files:</b> videos, subtitles, and metadata you select remain inside your browser tab and are not uploaded by this app.</li>
     <li><b>Public or direct links:</b> your browser connects to YouTube, Google Drive, or the URL host you supplied.</li>
     <li><b>Private Google Drive files:</b> Google returns folder and file names, IDs, MIME types, sizes, and modification times while you browse. The app then downloads the content of the video you choose.</li>
-    <li><b>Deployment configuration:</b> the public OAuth client ID may be saved in local storage. No API key or client secret belongs in this app.</li>
     <li><b>Preferences:</b> overlay sizes, visibility, background style, and positions are saved in local storage.</li>
   </ul>
 
@@ -51,7 +50,7 @@
     <li>The Google access token is held only in JavaScript memory. It is never written to local storage, a cookie, a file, or an application server.</li>
     <li>The access token disappears when the page reloads or closes, expires after Google's short lifetime, and is revoked when you choose <b>Disconnect Google Drive</b>.</li>
     <li>A buffered Drive video remains in memory only until you replace it, disconnect Drive, reload, or close the tab.</li>
-    <li>The public OAuth client ID and UI preferences remain in local storage until you clear this site's browser data.</li>
+    <li>UI preferences remain in local storage until you clear this site's browser data.</li>
   </ul>
 
   <h2>Disclosure and third parties</h2>
@@ -61,7 +60,7 @@
   <p>Use <b>Menu → Disconnect Google Drive</b> to revoke the current Google grant and remove any private buffered video from the player. You can also revoke the app from your Google Account's third-party access page, close the tab, or clear this site's browser storage.</p>
 
   <h2>Google API Services policy</h2>
-  <p>Video Subtitle Overlay's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</p>
+  <p>FrameCue's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</p>
 
   <h2>Contact</h2>
   <p>Questions or deletion concerns can be raised through the repository's <a href="https://github.com/nipunbatra/video-subtitle-overlay/issues">GitHub issue tracker</a>. Because the app has no server-side account or storage, there is no server-held user record for the project to delete.</p>

@@ -6,7 +6,7 @@
 <meta name="description" content="Play local, YouTube, Google Drive, or direct-link video with synced subtitles, metadata, and a responsive timecode overlay.">
 <meta name="theme-color" content="#12151b">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23171a20'/%3E%3Cpath d='M13 23h38v28H13z' fill='%236e9eea'/%3E%3Cpath d='m13 23 7-10h10l-7 10m10 0 7-10h11l-7 10' fill='none' stroke='%23edf0f5' stroke-width='5'/%3E%3Cpath d='m28 31 13 7-13 7z' fill='%2307101d'/%3E%3C/svg%3E">
-<title>Video Subtitle Overlay</title>
+<title>FrameCue — video overlays for sharing</title>
 <style>
   :root {
     --sub-size: 34px;
@@ -351,19 +351,6 @@
     padding: 10px 12px; border-left: 3px solid var(--accent); border-radius: 0 7px 7px 0;
     background: rgba(110,158,234,.08); color: #cbd9ec; font-size: 12px; line-height: 1.5;
   }
-  .drive-setup { margin-top: 13px; border: 1px solid var(--line); border-radius: 9px; background: #141821; }
-  .drive-setup summary { padding: 10px 12px; color: #cbd1db; cursor: pointer; font-size: 12px; font-weight: 650; }
-  .drive-setup[open] summary { border-bottom: 1px solid var(--line); }
-  .drive-setup .drive-fields { padding: 12px; }
-  .drive-fields { display: grid; gap: 10px; }
-  .drive-fields label { color: var(--text); font-size: 11.5px; font-weight: 600; }
-  .drive-fields input {
-    display: block; width: 100%; margin-top: 5px; padding: 9px 10px; border: 1px solid var(--line);
-    border-radius: 7px; background: #0f131b; color: var(--text); font: 12px/1.4 ui-monospace, Menlo, monospace;
-  }
-  .drive-config-help { color: var(--muted); font-size: 11px; line-height: 1.5; }
-  .drive-config-help a { color: var(--accent-strong); }
-  .drive-save-row { display: flex; justify-content: flex-end; }
   #driveStatus { min-height: 19px; margin-top: 10px; color: var(--muted); font-size: 12px; }
   #driveStatus.error { color: var(--danger); }
   #driveStatus.ready { color: #8ce1b5; }
@@ -455,7 +442,7 @@
 <body>
 <a class="skip-link" href="#stage">Skip to video</a>
 <header>
-  <h1>Video Overlay</h1>
+  <h1>FrameCue</h1>
   <button id="libraryToggle" class="mobile-only" aria-controls="list" aria-expanded="false">Library</button>
   <label class="btn primary"><span class="desktop-label">Pick folder</span><span class="mobile-label">Folder</span>
     <input type="file" id="dirInput" webkitdirectory directory multiple>
@@ -478,6 +465,7 @@
       <button id="menuPickFiles" type="button" role="menuitem"><span>Pick individual files…</span><small>video or sidecars</small></button>
       <button id="menuMetaBuild" type="button" role="menuitem"><span>New metadata…</span><small>build a JSON file</small></button>
       <button id="menuPresent" type="button" role="menuitem"><span>Presentation mode</span><small>press p to exit</small></button>
+      <a href="https://nipunbatra.github.io/video-trim-metadata-store/" target="_blank" rel="noopener noreferrer" role="menuitem"><span>FrameCut</span><small>trim Drive video</small></a>
       <a href="https://github.com/nipunbatra/video-subtitle-overlay" target="_blank" rel="noopener noreferrer" role="menuitem"><span>Documentation and source</span><small>GitHub</small></a>
       <a href="privacy.html" target="_blank" rel="noopener noreferrer" role="menuitem"><span>Privacy</span><small>Google data use</small></a>
       <div class="menu-rule" role="separator"></div>
@@ -592,19 +580,10 @@
     <h2 id="driveTitle">Open a private Drive video</h2>
     <p>Connect a Google Account, browse your Drive folders, and choose a video. The app never requests Gmail access and cannot upload, edit, share, or delete Drive files.</p>
     <div class="drive-scope"><b>Read-only permission:</b> browse Drive file names and folders, then download the video you choose (<code>drive.readonly</code>). The short-lived access token stays in memory and is never written to local storage.</div>
-    <details id="driveSetupDetails" class="drive-setup" open>
-      <summary>Site-owner setup</summary>
-      <div class="drive-fields">
-        <label>OAuth web client ID
-          <input id="driveClientId" type="text" autocomplete="off" spellcheck="false" placeholder="123456789-….apps.googleusercontent.com">
-        </label>
-        <div class="drive-config-help">Needed once per deployment—not per user. This public browser identifier is never a client secret or refresh token. A fixed hosted app should place it in <code>BUILTIN_GOOGLE_CONFIG</code>. No API key is needed. See the <a href="https://github.com/nipunbatra/video-subtitle-overlay#private-google-drive-setup" target="_blank" rel="noopener noreferrer">setup instructions</a>.</div>
-        <div class="drive-save-row"><button id="driveSave" type="button">Save browser configuration</button></div>
-      </div>
-    </details>
-    <div id="driveStatus" role="status" aria-live="polite">Enter the deployment credentials once, then save them.</div>
+    <div id="driveStatus" role="status" aria-live="polite">Preparing a secure Google connection…</div>
     <div class="drive-actions">
       <button id="driveCancel" type="button">Cancel</button>
+      <button id="driveRetry" class="hidden" type="button">Retry</button>
       <button id="driveConnect" class="primary" type="button" disabled>Continue with Google</button>
     </div>
   </section>
@@ -673,52 +652,20 @@ let mbOpen = false, sourceOpen = false, driveModalOpen = false, driveBrowserOpen
 let loadGeneration = 0, remoteController = null, bufferingRemote = false;
 
 const RAW_APP_URL = 'https://raw.githubusercontent.com/nipunbatra/video-subtitle-overlay/main/app.html';
-const GOOGLE_CONFIG_KEY = 'vso-google-config-v2';
-const LEGACY_GOOGLE_CONFIG_KEY = 'vso-google-config-v1';
+const RETIRED_GOOGLE_CONFIG_KEYS = ['vso-google-config-v1', 'vso-google-config-v2'];
 const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 const GOOGLE_DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const GOOGLE_FOLDER_MIME = 'application/vnd.google-apps.folder';
 // Public, origin-restricted browser client shared with video-trim-metadata-store.
 // It is not a secret; never add its client secret, access token, or refresh token here.
-const BUILTIN_GOOGLE_CONFIG = {
-  clientId: '754571415429-dve19qtjfntr104sk8a70tb4rt79mgsc.apps.googleusercontent.com',
-};
-let googleConfig = loadGoogleConfig();
+const GOOGLE_OAUTH_CLIENT_ID = '754571415429-dve19qtjfntr104sk8a70tb4rt79mgsc.apps.googleusercontent.com';
+// Remove configuration saved by older builds, including retired Picker API keys.
+try { RETIRED_GOOGLE_CONFIG_KEYS.forEach(key => localStorage.removeItem(key)); } catch(_e){}
 let googleLibrariesPromise = null, googleTokenClient = null, googleAuthReady = false;
 let googleAccessToken = null, googleTokenExpiresAt = 0;
 
 const itemKey = it => it.key || (it.dir + '||' + it.name);
 
-function validateGoogleConfig(clientId){
-  clientId = (clientId || '').trim();
-  const cm = clientId.match(/^([0-9]+)-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/);
-  if (!cm) return { valid: false, error: 'Enter a valid OAuth web client ID.' };
-  return { valid: true, clientId };
-}
-function loadGoogleConfig(){
-  let stored = null;
-  try {
-    stored = JSON.parse(localStorage.getItem(GOOGLE_CONFIG_KEY) || 'null');
-    const legacy = JSON.parse(localStorage.getItem(LEGACY_GOOGLE_CONFIG_KEY) || 'null');
-    // Keep only the public client ID, then purge the retired Picker object
-    // because it may contain the exposed API key.
-    const legacyChecked = legacy && validateGoogleConfig(legacy.clientId);
-    if (!stored && legacyChecked && legacyChecked.valid){
-      stored = { clientId: legacyChecked.clientId };
-      localStorage.setItem(GOOGLE_CONFIG_KEY, JSON.stringify(stored));
-    }
-    localStorage.removeItem(LEGACY_GOOGLE_CONFIG_KEY);
-  } catch(e){
-    try { localStorage.removeItem(LEGACY_GOOGLE_CONFIG_KEY); } catch(_e){}
-  }
-  const candidate = stored || BUILTIN_GOOGLE_CONFIG;
-  const checked = validateGoogleConfig(candidate.clientId);
-  return checked.valid ? checked : { clientId: candidate.clientId || '' };
-}
-function persistGoogleConfig(config){
-  googleConfig = config;
-  try { localStorage.setItem(GOOGLE_CONFIG_KEY, JSON.stringify({ clientId: config.clientId })); } catch(e){}
-}
 function hasGoogleToken(){ return !!googleAccessToken && Date.now() < googleTokenExpiresAt; }
 
 function setPlaceholder(message, kind='', link=null){
@@ -1257,7 +1204,7 @@ function loadYtApi(){
 
 const YT_MSG_FILE = 'YouTube blocks players on pages opened as local files (no referrer — error 153). ' +
   'Use the hosted app at nipunbatra.github.io/video-subtitle-overlay/app.html, or serve this file over http ' +
-  '(e.g. "python3 -m http.server" then open http://localhost:8000/app.html). Local videos work fine either way.';
+  '(e.g. "python3 -m http.server 5173" then open http://localhost:5173/app.html). Local videos work fine either way.';
 const YT_ERRORS = {
   2: 'Invalid YouTube video ID.',
   5: 'This YouTube video cannot be played here.',
@@ -1377,8 +1324,8 @@ $('libraryToggle').onclick = () => setLibraryOpen(!document.body.classList.conta
 
 /* ---------- app menu, raw download & private Google Drive ---------- */
 const appMenu = $('appMenu'), menuToggle = $('menuToggle');
-const driveModal = $('driveModal'), driveClientId = $('driveClientId');
-const driveStatus = $('driveStatus'), driveConnect = $('driveConnect'), driveSetupDetails = $('driveSetupDetails');
+const driveModal = $('driveModal'), driveStatus = $('driveStatus');
+const driveConnect = $('driveConnect'), driveRetry = $('driveRetry');
 const driveBrowserModal = $('driveBrowserModal'), driveBrowserList = $('driveBrowserList');
 const driveBreadcrumbs = $('driveBreadcrumbs'), driveBrowserStatus = $('driveBrowserStatus');
 let menuOpen = false, driveLastFocus = null;
@@ -1421,13 +1368,10 @@ $('menuPresent').onclick = () => { setMenuOpen(false); $('presentBtn').click(); 
 
 function updateDriveMenu(){
   const status = $('driveMenuStatus');
-  const configured = validateGoogleConfig(googleConfig.clientId).valid;
   if (hasGoogleToken()){
     status.textContent = 'Google Drive connected for this tab.'; status.className = 'menu-status connected';
-  } else if (configured){
-    status.textContent = 'Google Drive configured; connect to choose a private file.'; status.className = 'menu-status';
   } else {
-    status.textContent = 'Google Drive needs one-time deployment configuration.'; status.className = 'menu-status';
+    status.textContent = 'Connect Google Drive to choose a private video.'; status.className = 'menu-status';
   }
   $('driveDisconnect').classList.toggle('hidden', !hasGoogleToken());
 }
@@ -1449,26 +1393,25 @@ function closeDriveModal(){
 async function openDriveModal(){
   setMenuOpen(false);
   driveLastFocus = document.activeElement;
-  driveClientId.value = googleConfig.clientId || '';
   driveConnect.disabled = true;
+  driveRetry.classList.add('hidden');
   driveModal.classList.remove('hidden'); driveModalOpen = true;
-  const checked = validateGoogleConfig(driveClientId.value);
-  driveSetupDetails.open = !checked.valid;
   if (location.protocol === 'file:'){
-    setDriveStatus('Google authorization requires an http(s) origin. Serve this file locally or use the hosted app.', 'error');
-    driveClientId.focus(); return;
+    setDriveStatus('Google Drive sign-in needs the hosted app or http://localhost:5173. Local videos still work here.', 'error');
+    $('driveCancel').focus(); return;
   }
-  if (!checked.valid){ setDriveStatus('Enter the deployment credentials once, then save them.'); driveClientId.focus(); return; }
   setDriveStatus('Loading Google Identity Services…');
   try {
     await prepareGoogleLibraries();
     if (!driveModalOpen) return;
-    driveSetupDetails.open = false;
     driveConnect.disabled = false;
     setDriveStatus(hasGoogleToken() ? 'Drive is connected. Continue to choose a video.' : 'Ready. Continue to choose a Google Account and one video.', 'ready');
     driveConnect.focus();
   } catch(e){
-    if (driveModalOpen) setDriveStatus('Could not load Google authorization. Check the connection and try Save configuration again.', 'error');
+    if (driveModalOpen){
+      setDriveStatus('Could not load Google authorization. Check your connection and retry.', 'error');
+      driveRetry.classList.remove('hidden'); driveRetry.focus();
+    }
   }
 }
 $('driveOpen').onclick = () => {
@@ -1490,8 +1433,6 @@ function loadExternalScript(src, ready){
   });
 }
 async function prepareGoogleLibraries(){
-  const checked = validateGoogleConfig(googleConfig.clientId);
-  if (!checked.valid) throw new Error(checked.error);
   if (!googleLibrariesPromise){
     googleLibrariesPromise = loadExternalScript(
       'https://accounts.google.com/gsi/client',
@@ -1501,7 +1442,7 @@ async function prepareGoogleLibraries(){
   }
   await googleLibrariesPromise;
   googleTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: checked.clientId,
+    client_id: GOOGLE_OAUTH_CLIENT_ID,
     scope: GOOGLE_DRIVE_SCOPE,
     callback: handleGoogleToken,
     error_callback: e => {
@@ -1509,26 +1450,24 @@ async function prepareGoogleLibraries(){
     },
   });
 }
-$('driveSave').onclick = async () => {
-  const checked = validateGoogleConfig(driveClientId.value);
-  if (!checked.valid){ setDriveStatus(checked.error, 'error'); return; }
-  const changed = checked.clientId !== googleConfig.clientId;
-  if (changed) clearGoogleAuthorization(false);
-  persistGoogleConfig(checked);
+driveRetry.onclick = async () => {
   googleTokenClient = null;
   driveConnect.disabled = true;
-  setDriveStatus('Configuration saved. Loading Google authorization…');
+  driveRetry.classList.add('hidden');
+  setDriveStatus('Retrying Google authorization…');
   try {
     await prepareGoogleLibraries();
     if (!driveModalOpen) return;
-    driveSetupDetails.open = false;
     driveConnect.disabled = false; setDriveStatus('Ready. Continue to choose a Google Account and one video.', 'ready');
     driveConnect.focus(); updateDriveMenu();
-  } catch(e){ setDriveStatus('Could not load Google authorization. Check the connection and try again.', 'error'); }
+  } catch(e){
+    setDriveStatus('Could not load Google authorization. Check your connection and retry.', 'error');
+    driveRetry.classList.remove('hidden'); driveRetry.focus();
+  }
 };
 $('driveConnect').onclick = () => {
   if (hasGoogleToken()){ closeDriveModal(); showGoogleDriveBrowser(); return; }
-  if (!googleTokenClient){ setDriveStatus('Google authorization is not ready. Save the configuration and retry.', 'error'); return; }
+  if (!googleTokenClient){ setDriveStatus('Google authorization is not ready. Retry the connection.', 'error'); driveRetry.classList.remove('hidden'); return; }
   setDriveStatus('Waiting for Google Account selection…');
   googleTokenClient.requestAccessToken({ prompt: 'select_account' });
 };
@@ -1719,7 +1658,7 @@ async function downloadRawHtml(){
   }
   if (html === null){ setLoadStatus('Could not download the raw HTML: ' + (lastError ? lastError.message : 'unknown error'), null, 'error'); return; }
   const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
-  const a = document.createElement('a'); a.href = url; a.download = 'video-subtitle-overlay.html';
+  const a = document.createElement('a'); a.href = url; a.download = 'framecue.html';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   setLoadStatus('Raw HTML downloaded.', 100); setTimeout(() => setLoadStatus(), 1400);

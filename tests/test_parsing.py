@@ -86,15 +86,13 @@ def test_format_bytes(app, size, expected):
     assert app.evaluate("n => formatBytes(n)", size) == expected
 
 
-def test_google_browser_config_validation(app):
-    valid = app.evaluate("c => validateGoogleConfig(c)",
-                         "123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com")
-    assert valid == {
-        "valid": True,
-        "clientId": "123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
-    }
-    assert app.evaluate("() => validateGoogleConfig('bad').valid") is False
-    assert "OAuth web client" in app.evaluate("() => validateGoogleConfig('bad').error")
+def test_google_oauth_deployment_is_keyless_and_well_formed(app):
+    client_id = app.evaluate("GOOGLE_OAUTH_CLIENT_ID")
+    assert client_id.startswith("754571415429-")
+    assert client_id.endswith(".apps.googleusercontent.com")
+    assert app.locator("#driveClientId, #driveApiKey").count() == 0
+    assert app.evaluate("localStorage.getItem('vso-google-config-v1')") is None
+    assert app.evaluate("localStorage.getItem('vso-google-config-v2')") is None
 
 
 def test_parse_vtt_basic(app):
