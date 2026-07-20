@@ -234,6 +234,20 @@ def test_framecue_brand_and_companion_links_use_renamed_sites(app):
     assert "video-trim-metadata-store" not in html
 
 
+def test_landing_page_is_semantic_concise_and_mobile_safe(page, http_root):
+    page.goto(f"{http_root}/index.html")
+    assert page.title() == "FrameCue — video overlays for screen sharing"
+    assert page.locator("main#main").count() == 1
+    assert page.get_attribute(".skip-link", "href") == "#main"
+    assert page.locator("#features .card").count() == 4
+    assert page.get_by_role("link", name="Launch app", exact=True).count() == 1
+
+    page.set_viewport_size({"width": 320, "height": 680})
+    assert page.evaluate("document.documentElement.scrollWidth === 320")
+    page.focus(".skip-link")
+    assert page.locator(".skip-link").is_visible()
+
+
 def test_mobile_overlays_do_not_collide_and_library_is_accessible(app):
     app.set_viewport_size({"width": 390, "height": 760})
     setup_video(app)
